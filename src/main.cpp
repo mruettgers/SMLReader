@@ -90,8 +90,8 @@ void wait_for_start_sequence() {
 // Read the rest of the message
 void read_message() {
 	while(data_available()) {
-		// Check whether the buffer still big enough to hold the number of fill bytes (2 bytes) and the checksum (4 bytes)
-		if ((position + 6) == BUFFER_SIZE) {
+		// Check whether the buffer is still big enough to hold the number of fill bytes (1 byte) and the checksum (2 bytes)
+		if ((position + 3) == BUFFER_SIZE) {
 			reset("Buffer will overflow, starting over.");
 			return;
 		}
