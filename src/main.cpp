@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
+#include <Homie.h>
 #include <SoftwareSerial.h>
-
 #include <FastCRC.h>
 
 const bool DEBUG = true;
@@ -9,10 +9,9 @@ const int SENSOR_PIN = 4;
 
 const byte START_SEQUENCE[] = { 0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01 };
 const byte END_SEQUENCE[] = { 0x1B, 0x1B, 0x1B, 0x1B, 0x1A };
-const int BUFFER_SIZE = 1024;
+const int BUFFER_SIZE = 3840; // Max datagram duration 400ms at 9600 Baud
 
 byte buffer[BUFFER_SIZE];
-int position = 0;
 SoftwareSerial sensor(SENSOR_PIN, -1);
 FastCRC16 CRC16;
 
@@ -21,38 +20,9 @@ void wait_for_start_sequence();
 void read_message();
 void read_num_of_fillbytes_and_checksum();
 void process_message();
-bool data_available();
-int data_read();
 
-
-void (*state)(void) = NULL;
-
-
-// Print to serial console
-void log(const char *message) {
-	if (message != NULL && strlen(message) > 0) {
-		Serial.println(message);
-	}
-}
-
-
-void debug(const char *message) {
-	if (!DEBUG) {
-		return;
-	}
-	log(message);
-}
-
-void dump_buffer(){
-	Serial.println("----DATA----");
-	for (int i = 0; i < position; i++) {
-		Serial.print("0x");
-		Serial.print(buffer[i], HEX);
-		Serial.print(" ");
-	} 
-	Serial.println();
-	Serial.println("---END_OF_DATA---");
-} 
+int position = 0;
+void (*state)(void) = wait_for_start_sequence;
 
 bool data_available() {
 	return sensor.available();
@@ -62,12 +32,34 @@ int data_read() {
 	return sensor.read();
 }
 
+void log(const char *message) {
+	Homie.getLogger() << message << endl;
+}
+
+void debug(const char *message) {
+	if (DEBUG) {
+		log(message);
+	}
+}
+
+void dump_buffer(){
+	HomieInternals::Logger logger = Homie.getLogger();
+	logger << "----DATA----" << endl;
+	for (int i = 0; i < position; i++) {
+		logger.print("0x");
+		logger.print(buffer[i], HEX);
+		logger.print(" ");
+	}
+	logger << endl << "---END_OF_DATA---" << endl;
+} 
 
 // Start (over) and wait for the start sequence
 void reset(const char *message = NULL) {
 	position = 0;
 	state = wait_for_start_sequence;
-	log(message);
+	if (message != NULL && strlen(message) > 0) {
+		log(message);
+	}
 }
 
 
@@ -155,17 +147,31 @@ void run_current_state() {
     }
 }
 
-void setup() {
-	Serial.begin(115200);
-	log("Setting up application...");
+
+
+void setupHandler() {
+    Homie.getLogger() << "Setting app application...";
 
 	sensor.begin(9600);
-	log("Sensor has been initialized.");
-	
-	log("Application setup finished.");
-	reset();
+	Homie.getLogger() << "Sensor has been initialized.";
+
+	Homie.getLogger() << "Application setup finished.";
+}
+
+void loopHandler() {
+	run_current_state();
+}
+
+void setup() {
+	Serial.begin(115200);
+	Serial << endl << endl;
+
+	Homie_setFirmware("sml-reader", "1.0.0");
+	Homie.setSetupFunction(setupHandler);
+	Homie.setLoopFunction(loopHandler);
+	Homie.setup();
 }
 
 void loop() {
-	run_current_state();
+	Homie.loop();	
 }
