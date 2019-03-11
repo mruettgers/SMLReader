@@ -4,7 +4,7 @@
 #include <SoftwareSerial.h>
 #include <FastCRC.h>
 
-const bool DEBUG = true;
+const bool DEBUG = false;
 const int SENSOR_PIN = 4;
 
 const byte START_SEQUENCE[] = { 0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01 };
@@ -71,7 +71,7 @@ void wait_for_start_sequence() {
 
 		if (position == sizeof(START_SEQUENCE)) {
 			// Start sequence has been found
-			debug("Start sequence has been found, handing over to 'read_message'.");
+			debug("Start sequence found.");
 			state = read_message;
 			return;
 		}
@@ -96,7 +96,7 @@ void read_message() {
 				break;
 			}
 			if (i == last_index_of_end_seq) {
-				debug("End sequence has been found, handing over to 'read_num_of_fillbytes_and_checksum'.");
+				debug("End sequence found.");
 				state = read_num_of_fillbytes_and_checksum;
 				return;
 			}
@@ -116,7 +116,10 @@ void read_num_of_fillbytes_and_checksum() {
 			counter++;
 		}
 	}
-	debug("Last bytes have been read, handing over to 'process_message'.");
+	debug("Message has been read.");
+	if (DEBUG) {
+		dump_buffer();
+	} 
 	state = process_message;
 }
 
@@ -135,8 +138,6 @@ void process_message() {
 
 	// Publish
 
-	dump_buffer();
-
 	// Start over
 	reset();
 }
@@ -150,12 +151,12 @@ void run_current_state() {
 
 
 void setupHandler() {
-    Homie.getLogger() << "Setting app application...";
+    debug("Setting up application...");
 
 	sensor.begin(9600);
-	Homie.getLogger() << "Sensor has been initialized.";
+	debug("Sensor has been initialized.");
 
-	Homie.getLogger() << "Application setup finished.";
+	debug("Application setup finished.");
 }
 
 void loopHandler() {
