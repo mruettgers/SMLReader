@@ -1,12 +1,14 @@
 #include <Arduino.h>
 
-#include <Homie.h>
 #include <SoftwareSerial.h>
 #include <FastCRC.h>
 #include <string.h>
+#include "OneWireHub.h"
+#include "BAE910.h"
 
 const bool DEBUG = false;
-const int SENSOR_PIN = 4;
+const uint8_t SENSOR_PIN = 4;
+const uint8_t ONEWIRE_PIN = 0;
 
 const byte START_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01};
 const byte END_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x1A};
@@ -24,22 +26,18 @@ struct metric
 	const size_t pattern_length;
 	const byte *pattern;
 	const char *name;
-	const HomieNode node;
 };
 
 const metric METRICS[] = {
 	{8,
 	 (byte[]){0x77, 0x07, 0x01, 0x00, 0x01, 0x08, 0x00, 0xFF},
-	 "power_in",
-	 HomieNode("power_in", "power")},
+	 "power_in"},
 	{8,
 	 (byte[]){0x77, 0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xFF},
-	 "power_out",
-	 HomieNode("power_out", "power")},
+	 "power_out"},
 	{8,
 	 (byte[]){0x77, 0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xFF},
-	 "power_current",
-	 HomieNode("power_current", "power")}};
+	 "power_current"}};
 
 byte buffer[BUFFER_SIZE];
 const size_t METRIC_LENGTH = sizeof(METRICS) / sizeof(metric);
@@ -52,47 +50,40 @@ FastCRC16 CRC16;
 // States
 void wait_for_start_sequence();
 void read_message();
-void read_num_of_fillbytes_and_checksum();
+void read_checksum();
 void process_message();
 
+// Helpers
 int position = 0;
+uint8_t bytes_until_checksum = 0;
 void (*state)(void) = wait_for_start_sequence;
 
+// OneWire
+auto owHub = OneWireHub(ONEWIRE_PIN);
+auto owBae910 = BAE910(BAE910::family_code, 0x00, 0x00, 0x00, 0x00, 0xAC, 0xDC);
+
+// Wrappers for sensor access
 bool data_available()
 {
 	return sensor.available();
 }
-
 int data_read()
 {
 	return sensor.read();
 }
 
-void log(const char *message)
-{
-	Homie.getLogger() << message << endl;
-}
-
-void debug(const char *message)
-{
-	if (DEBUG)
-	{
-		log(message);
-	}
-}
-
+// Debug stuff
 void dump_buffer()
 {
-	HomieInternals::Logger logger = Homie.getLogger();
-	logger << "----DATA----" << endl;
+	Serial.println("----DATA----");
 	for (int i = 0; i < position; i++)
 	{
-		logger.print("0x");
-		logger.print(buffer[i], HEX);
-		logger.print(" ");
+		Serial.print("0x");
+		Serial.print(buffer[i], HEX);
+		Serial.print(" ");
 	}
-	logger << endl
-		   << "---END_OF_DATA---" << endl;
+	Serial.println();
+	Serial.println("---END_OF_DATA---");
 }
 
 // Start (over) and wait for the start sequence
@@ -102,7 +93,7 @@ void reset(const char *message = NULL)
 	state = wait_for_start_sequence;
 	if (message != NULL && strlen(message) > 0)
 	{
-		log(message);
+		Serial.println(message);
 	}
 }
 
@@ -117,7 +108,9 @@ void wait_for_start_sequence()
 		if (position == START_SEQUENCE_LENGTH)
 		{
 			// Start sequence has been found
-			debug("Start sequence found.");
+			if (DEBUG)
+				Serial.println("Start sequence found.");
+
 			state = read_message;
 			return;
 		}
@@ -147,8 +140,11 @@ void read_message()
 			}
 			if (i == last_index_of_end_seq)
 			{
-				debug("End sequence found.");
-				state = read_num_of_fillbytes_and_checksum;
+				if (DEBUG)
+					Serial.println("End sequence found.");
+
+				bytes_until_checksum = 3;
+				state = read_checksum;
 				return;
 			}
 		}
@@ -156,24 +152,23 @@ void read_message()
 }
 
 // Read the number of fillbytes and the checksum
-void read_num_of_fillbytes_and_checksum()
+void read_checksum()
 {
-	// Wait for the next 3 bytes to appear on the line
-	int counter = 0;
-	while (counter < 3)
+	while (bytes_until_checksum > 0 && data_available())
 	{
-		while (data_available())
+		buffer[position++] = data_read();
+		bytes_until_checksum--;
+	}
+
+	if (bytes_until_checksum == 0)
+	{
+		if (DEBUG)
 		{
-			buffer[position++] = data_read();
-			counter++;
+			Serial.println("Message has been read.");
+			dump_buffer();
 		}
+		state = process_message;
 	}
-	debug("Message has been read.");
-	if (DEBUG)
-	{
-		dump_buffer();
-	}
-	state = process_message;
 }
 
 void process_message()
@@ -202,7 +197,9 @@ void process_message()
 
 		if (found_at != NULL)
 		{
-			Homie.getLogger() << "Found metric " << METRICS[i].name << "." << endl;
+			Serial.print("Found metric ");
+			Serial.print(METRICS[i].name);
+			Serial.println(".");
 			cp = (byte *)(found_at) + METRICS[i].pattern_length;
 
 			// Ingore status byte
@@ -239,13 +236,41 @@ void process_message()
 	}
 
 	// Publish
+	int32_t value;
 	for (uint8_t i = 0; i < METRIC_LENGTH; i++)
 	{
-		METRICS[i].node.setProperty("value").send(String((double)(values[i].value * (pow(10, values[i].scaler)))));
-		Homie.getLogger() << "Published metric " << METRICS[i].name
-						  << " with value " << (long)values[i].value
-						  << ", unit " << (int)values[i].unit
-						  << " and scaler " << (int)values[i].scaler << "." << endl;
+		// We have 32 bit available
+		value = (values[i].value * (pow(10, values[i].scaler))) * 1000;
+		switch (i)
+		{
+		case 0:
+			owBae910.memory.field.userm = value;
+			break;
+		case 1:
+			owBae910.memory.field.usern = value;
+			break;
+		case 2:
+			owBae910.memory.field.usero = value;
+			break;
+		case 3:
+			owBae910.memory.field.userp = value;
+			break;
+		default:
+			Serial.print("Error: Num of metrics exceeds the num of available 32 bit slots of the BAE910.");
+			Serial.print(" Ignoring metric ");
+			Serial.print(METRICS[i].name);
+			Serial.println(".");
+			continue;
+		}
+		Serial.print("Published metric ");
+		Serial.print(METRICS[i].name);
+		Serial.print(" with value ");
+		Serial.print((long)values[i].value);
+		Serial.print(", unit ");
+		Serial.print((int)values[i].unit);
+		Serial.print(" and scaler ");
+		Serial.print((int)values[i].scaler);
+		Serial.println(".");
 	}
 
 	// Start over
@@ -260,35 +285,24 @@ void run_current_state()
 	}
 }
 
-void setupHandler()
-{
-	debug("Setting up application...");
-
-	sensor.begin(9600);
-	debug("Sensor has been initialized.");
-
-	debug("Application setup finished.");
-}
-
-void loopHandler()
-{
-	run_current_state();
-}
-
 void setup()
 {
 	Serial.begin(115200);
-	Serial << endl
-		   << endl;
+	sensor.begin(9600);
 
-	Homie_setFirmware("sml-reader", "1.0.0");
-	Homie.setSetupFunction(setupHandler);
-	Homie.setLoopFunction(loopHandler);
-
-	Homie.setup();
+	// OneWire
+	owHub.attach(owBae910);
+	owBae910.memory.field.SW_VER = 0x01;
+	owBae910.memory.field.BOOTSTRAP_VER = 0x01;
 }
 
 void loop()
 {
-	Homie.loop();
+	// Run application's current state
+	run_current_state();
+
+	// OneWire
+	owHub.poll();
+	if (owHub.hasError())
+		owHub.printError();
 }

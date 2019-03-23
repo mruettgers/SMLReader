@@ -1,2 +1,3 @@
 # SMLReader
-ESP8266 based SmartMeter (SML) to MQTT gateway
+ESP8266 based SmartMeter (SML) to OneWire gateway
+
