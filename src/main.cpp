@@ -3,6 +3,7 @@
 #include <SoftwareSerial.h>
 #include <FastCRC.h>
 #include <string.h>
+#include <list>
 #include "OneWireHub.h"
 #include "BAE910.h"
 
@@ -12,7 +13,8 @@ const uint8_t ONEWIRE_PIN = 0;
 
 const byte START_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01};
 const byte END_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x1A};
-const int BUFFER_SIZE = 3840; // Max datagram duration 400ms at 9600 Baud
+const uint16_t BUFFER_SIZE = 3840; // Max datagram duration 400ms at 9600 Baud
+const uint8_t READ_TIMEOUT = 30;
 
 struct metric_value
 {
@@ -23,29 +25,14 @@ struct metric_value
 
 struct metric
 {
-	const size_t pattern_length;
-	const byte *pattern;
 	const char *name;
+	const std::list<byte> pattern;
 };
 
 const metric METRICS[] = {
-	{8,
-	 (byte[]){0x77, 0x07, 0x01, 0x00, 0x01, 0x08, 0x00, 0xFF},
-	 "power_in"},
-	{8,
-	 (byte[]){0x77, 0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xFF},
-	 "power_out"},
-	{8,
-	 (byte[]){0x77, 0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xFF},
-	 "power_current"}};
-
-byte buffer[BUFFER_SIZE];
-const size_t METRIC_LENGTH = sizeof(METRICS) / sizeof(metric);
-const size_t START_SEQUENCE_LENGTH = sizeof(START_SEQUENCE) / sizeof(byte);
-const size_t END_SEQUENCE_LENGTH = sizeof(END_SEQUENCE) / sizeof(byte);
-
-SoftwareSerial sensor(SENSOR_PIN, -1);
-FastCRC16 CRC16;
+	{"power_in", {0x77, 0x07, 0x01, 0x00, 0x01, 0x08, 0x00, 0xFF}},
+	{"power_out", {0x77, 0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xFF}},
+	{"power_current", {0x77, 0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xFF}}};
 
 // States
 void wait_for_start_sequence();
@@ -53,14 +40,29 @@ void read_message();
 void read_checksum();
 void process_message();
 
+// Serial device
+SoftwareSerial sensor(SENSOR_PIN, -1);
+
 // Helpers
+FastCRC16 CRC16;
+byte buffer[BUFFER_SIZE];
+const size_t METRIC_LENGTH = sizeof(METRICS) / sizeof(metric);
+const size_t START_SEQUENCE_LENGTH = sizeof(START_SEQUENCE) / sizeof(byte);
+const size_t END_SEQUENCE_LENGTH = sizeof(END_SEQUENCE) / sizeof(byte);
 int position = 0;
+unsigned long last_state_reset = 0;
 uint8_t bytes_until_checksum = 0;
-void (*state)(void) = wait_for_start_sequence;
+void (*state)() = NULL;
+
+// Get ESP's chip ID for use in the BAE910's unique address
+union {
+	uint32_t value;
+	uint8_t fields[4];
+} const chip_id = {ESP.getChipId()};
 
 // OneWire
 auto owHub = OneWireHub(ONEWIRE_PIN);
-auto owBae910 = BAE910(BAE910::family_code, 0x00, 0x00, 0x00, 0x00, 0xAC, 0xDC);
+auto owBae910 = BAE910(BAE910::family_code, 'S', 'M', 'L', chip_id.fields[0], chip_id.fields[1], chip_id.fields[2]);
 
 // Wrappers for sensor access
 bool data_available()
@@ -86,11 +88,35 @@ void dump_buffer()
 	Serial.println("---END_OF_DATA---");
 }
 
-// Start (over) and wait for the start sequence
+// Set state
+void set_state(void (*new_state)())
+{
+	if (new_state == wait_for_start_sequence)
+	{
+		Serial.println("State is 'wait_for_start_sequence'.");
+		last_state_reset = millis();
+		position = 0;
+	}
+	else if (new_state == read_message)
+	{
+		Serial.println("State is 'read_message'.");
+	}
+	else if (new_state == read_checksum)
+	{
+		Serial.println("State is 'read_checksum'.");
+		bytes_until_checksum = 3;
+	}
+	else if (new_state == process_message)
+	{
+		Serial.println("State is 'process_message'.");
+	};
+	state = new_state;
+}
+
+// Start over and wait for the start sequence
 void reset(const char *message = NULL)
 {
-	position = 0;
-	state = wait_for_start_sequence;
+	set_state(wait_for_start_sequence);
 	if (message != NULL && strlen(message) > 0)
 	{
 		Serial.println(message);
@@ -110,8 +136,7 @@ void wait_for_start_sequence()
 			// Start sequence has been found
 			if (DEBUG)
 				Serial.println("Start sequence found.");
-
-			state = read_message;
+			set_state(read_message);
 			return;
 		}
 	}
@@ -142,9 +167,7 @@ void read_message()
 			{
 				if (DEBUG)
 					Serial.println("End sequence found.");
-
-				bytes_until_checksum = 3;
-				state = read_checksum;
+				set_state(read_checksum);
 				return;
 			}
 		}
@@ -167,7 +190,7 @@ void read_checksum()
 			Serial.println("Message has been read.");
 			dump_buffer();
 		}
-		state = process_message;
+		set_state(process_message);
 	}
 }
 
@@ -192,15 +215,15 @@ void process_message()
 	uint64_t uvalue;
 	for (uint8_t i = 0; i < METRIC_LENGTH; i++)
 	{
-		size_t pattern_size = METRICS[i].pattern_length * sizeof(byte);
-		found_at = memmem_P(buffer, position * sizeof(byte), METRICS[i].pattern, pattern_size);
+		size_t pattern_mem_size = METRICS[i].pattern.size() * sizeof(byte);
+		found_at = memmem_P(buffer, position * sizeof(byte), &METRICS[i].pattern.front(), pattern_mem_size);
 
 		if (found_at != NULL)
 		{
 			Serial.print("Found metric ");
 			Serial.print(METRICS[i].name);
 			Serial.println(".");
-			cp = (byte *)(found_at) + METRICS[i].pattern_length;
+			cp = (byte *)(found_at) + METRICS[i].pattern.size();
 
 			// Ingore status byte
 			cp += (*cp & 0x0f);
@@ -239,8 +262,7 @@ void process_message()
 	int32_t value;
 	for (uint8_t i = 0; i < METRIC_LENGTH; i++)
 	{
-		// We have 32 bit available
-		value = (values[i].value * (pow(10, values[i].scaler))) * 1000;
+		value = (uint32_t)((values[i].value * (pow(10, values[i].scaler))) * 1000);
 		switch (i)
 		{
 		case 0:
@@ -281,12 +303,20 @@ void run_current_state()
 {
 	if (state != NULL)
 	{
+		if ((millis() - last_state_reset) > (READ_TIMEOUT * 1000))
+		{
+			Serial.print("Did not receive a message within ");
+			Serial.print(READ_TIMEOUT);
+			Serial.println(" seconds, starting over.");
+			reset();
+		}
 		state();
 	}
 }
 
 void setup()
 {
+	// Setup serial stuff
 	Serial.begin(115200);
 	sensor.begin(9600);
 
@@ -294,6 +324,9 @@ void setup()
 	owHub.attach(owBae910);
 	owBae910.memory.field.SW_VER = 0x01;
 	owBae910.memory.field.BOOTSTRAP_VER = 0x01;
+
+	// Set initial state
+	set_state(wait_for_start_sequence);
 }
 
 void loop()
