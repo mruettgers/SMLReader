@@ -116,11 +116,11 @@ void set_state(void (*new_state)())
 // Start over and wait for the start sequence
 void reset(const char *message = NULL)
 {
-	set_state(wait_for_start_sequence);
 	if (message != NULL && strlen(message) > 0)
 	{
 		Serial.println(message);
 	}
+	set_state(wait_for_start_sequence);
 }
 
 // Wait for the start_sequence to appear
