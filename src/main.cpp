@@ -3,17 +3,20 @@
 #include <SoftwareSerial.h>
 #include <FastCRC.h>
 #include <string.h>
-#include <list>
+#include <vector>
 #include "OneWireHub.h"
 #include "BAE910.h"
 
-const bool DEBUG = false;
+//#define ENABLE_SERIAL_DEBUG
+#ifdef ENABLE_SERIAL_DEBUG
+const bool VERBOSE = false;
+#endif
 const uint8_t SENSOR_PIN = 4;
 const uint8_t ONEWIRE_PIN = 0;
 
 const byte START_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01};
 const byte END_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x1A};
-const uint16_t BUFFER_SIZE = 3840; // Max datagram duration 400ms at 9600 Baud
+const size_t BUFFER_SIZE = 3840; // Max datagram duration 400ms at 9600 Baud
 const uint8_t READ_TIMEOUT = 30;
 
 struct metric_value
@@ -26,13 +29,14 @@ struct metric_value
 struct metric
 {
 	const char *name;
-	const std::list<byte> pattern;
+	const std::vector<byte> pattern;
 };
 
 const metric METRICS[] = {
 	{"power_in", {0x77, 0x07, 0x01, 0x00, 0x01, 0x08, 0x00, 0xFF}},
 	{"power_out", {0x77, 0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xFF}},
 	{"power_current", {0x77, 0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xFF}}};
+const uint8_t NUM_OF_METRICS = sizeof(METRICS) / sizeof(metric);
 
 // States
 void wait_for_start_sequence();
@@ -41,17 +45,15 @@ void read_checksum();
 void process_message();
 
 // Serial device
-SoftwareSerial sensor(SENSOR_PIN, -1);
+SoftwareSerial sensor(SENSOR_PIN, -1, false, BUFFER_SIZE, BUFFER_SIZE);
 
 // Helpers
 FastCRC16 CRC16;
 byte buffer[BUFFER_SIZE];
-const size_t METRIC_LENGTH = sizeof(METRICS) / sizeof(metric);
-const size_t START_SEQUENCE_LENGTH = sizeof(START_SEQUENCE) / sizeof(byte);
-const size_t END_SEQUENCE_LENGTH = sizeof(END_SEQUENCE) / sizeof(byte);
-int position = 0;
+size_t position = 0;
 unsigned long last_state_reset = 0;
 uint8_t bytes_until_checksum = 0;
+uint8_t loop_counter = 0;
 void (*state)() = NULL;
 
 // Get ESP's chip ID for use in the BAE910's unique address
@@ -65,7 +67,7 @@ auto owHub = OneWireHub(ONEWIRE_PIN);
 auto owBae910 = BAE910(BAE910::family_code, 'S', 'M', 'L', chip_id.fields[0], chip_id.fields[1], chip_id.fields[2]);
 
 // Wrappers for sensor access
-bool data_available()
+int data_available()
 {
 	return sensor.available();
 }
@@ -75,10 +77,12 @@ int data_read()
 }
 
 // Debug stuff
+#ifdef ENABLE_SERIAL_DEBUG
+
 void dump_buffer()
 {
 	Serial.println("----DATA----");
-	for (int i = 0; i < position; i++)
+	for (size_t i = 0; i < position; i++)
 	{
 		Serial.print("0x");
 		Serial.print(buffer[i], HEX);
@@ -87,28 +91,37 @@ void dump_buffer()
 	Serial.println();
 	Serial.println("---END_OF_DATA---");
 }
+#endif
 
 // Set state
 void set_state(void (*new_state)())
 {
 	if (new_state == wait_for_start_sequence)
 	{
+#ifdef ENABLE_SERIAL_DEBUG
 		Serial.println("State is 'wait_for_start_sequence'.");
+#endif
 		last_state_reset = millis();
 		position = 0;
 	}
 	else if (new_state == read_message)
 	{
+#ifdef ENABLE_SERIAL_DEBUG
 		Serial.println("State is 'read_message'.");
+#endif
 	}
 	else if (new_state == read_checksum)
 	{
+#ifdef ENABLE_SERIAL_DEBUG
 		Serial.println("State is 'read_checksum'.");
+#endif
 		bytes_until_checksum = 3;
 	}
 	else if (new_state == process_message)
 	{
+#ifdef ENABLE_SERIAL_DEBUG
 		Serial.println("State is 'process_message'.");
+#endif
 	};
 	state = new_state;
 }
@@ -116,10 +129,12 @@ void set_state(void (*new_state)())
 // Start over and wait for the start sequence
 void reset(const char *message = NULL)
 {
+#ifdef ENABLE_SERIAL_DEBUG
 	if (message != NULL && strlen(message) > 0)
 	{
 		Serial.println(message);
 	}
+#endif
 	set_state(wait_for_start_sequence);
 }
 
@@ -129,13 +144,16 @@ void wait_for_start_sequence()
 	while (data_available())
 	{
 		buffer[position] = data_read();
-		position = (buffer[position] == START_SEQUENCE[position]) ? (position + 1) : 0;
+		yield();
 
-		if (position == START_SEQUENCE_LENGTH)
+		position = (buffer[position] == START_SEQUENCE[position]) ? (position + 1) : 0;
+		if (position == sizeof(START_SEQUENCE))
 		{
-			// Start sequence has been found
-			if (DEBUG)
+// Start sequence has been found
+#ifdef ENABLE_SERIAL_DEBUG
+			if (VERBOSE)
 				Serial.println("Start sequence found.");
+#endif
 			set_state(read_message);
 			return;
 		}
@@ -154,9 +172,10 @@ void read_message()
 			return;
 		}
 		buffer[position++] = data_read();
+		yield();
 
 		// Check for end sequence
-		int last_index_of_end_seq = END_SEQUENCE_LENGTH - 1;
+		int last_index_of_end_seq = sizeof(END_SEQUENCE) - 1;
 		for (int i = 0; i <= last_index_of_end_seq; i++)
 		{
 			if (END_SEQUENCE[last_index_of_end_seq - i] != buffer[position - (i + 1)])
@@ -165,8 +184,11 @@ void read_message()
 			}
 			if (i == last_index_of_end_seq)
 			{
-				if (DEBUG)
+#ifdef ENABLE_SERIAL_DEBUG
+
+				if (VERBOSE)
 					Serial.println("End sequence found.");
+#endif
 				set_state(read_checksum);
 				return;
 			}
@@ -181,15 +203,19 @@ void read_checksum()
 	{
 		buffer[position++] = data_read();
 		bytes_until_checksum--;
+		yield();
 	}
 
 	if (bytes_until_checksum == 0)
 	{
-		if (DEBUG)
+#ifdef ENABLE_SERIAL_DEBUG
+
+		if (VERBOSE)
 		{
 			Serial.println("Message has been read.");
 			dump_buffer();
 		}
+#endif
 		set_state(process_message);
 	}
 }
@@ -197,9 +223,9 @@ void read_checksum()
 void process_message()
 {
 	// Verify by checksum
-	int calculated_checksum = CRC16.x25(buffer, (position - 2));
+	uint16_t calculated_checksum = CRC16.x25(buffer, (position - 2));
 	// Swap the bytes
-	int given_checksum = (buffer[position - 1] << 8) | buffer[position - 2];
+	uint16_t given_checksum = (buffer[position - 1] << 8) | buffer[position - 2];
 
 	if (calculated_checksum != given_checksum)
 	{
@@ -209,21 +235,24 @@ void process_message()
 
 	// Parse
 	void *found_at;
-	metric_value values[METRIC_LENGTH];
+	metric_value values[NUM_OF_METRICS];
 	byte *cp;
 	byte len, type;
 	uint64_t uvalue;
-	for (uint8_t i = 0; i < METRIC_LENGTH; i++)
+	for (uint8_t i = 0; i < NUM_OF_METRICS; i++)
 	{
-		size_t pattern_mem_size = METRICS[i].pattern.size() * sizeof(byte);
-		found_at = memmem_P(buffer, position * sizeof(byte), &METRICS[i].pattern.front(), pattern_mem_size);
+		size_t pattern_size = METRICS[i].pattern.size();
+		found_at = memmem_P(buffer, position, &(METRICS[i].pattern.front()), pattern_size);
 
 		if (found_at != NULL)
 		{
+#ifdef ENABLE_SERIAL_DEBUG
+
 			Serial.print("Found metric ");
 			Serial.print(METRICS[i].name);
 			Serial.println(".");
-			cp = (byte *)(found_at) + METRICS[i].pattern.size();
+#endif
+			cp = (byte *)(found_at) + pattern_size;
 
 			// Ingore status byte
 			cp += (*cp & 0x0f);
@@ -260,7 +289,7 @@ void process_message()
 
 	// Publish
 	int32_t value;
-	for (uint8_t i = 0; i < METRIC_LENGTH; i++)
+	for (uint8_t i = 0; i < NUM_OF_METRICS; i++)
 	{
 		value = (uint32_t)((values[i].value * (pow(10, values[i].scaler))) * 1000);
 		switch (i)
@@ -278,12 +307,18 @@ void process_message()
 			owBae910.memory.field.userp = value;
 			break;
 		default:
+#ifdef ENABLE_SERIAL_DEBUG
+
 			Serial.print("Error: Num of metrics exceeds the num of available 32 bit slots of the BAE910.");
 			Serial.print(" Ignoring metric ");
 			Serial.print(METRICS[i].name);
 			Serial.println(".");
+#endif
 			continue;
 		}
+
+#ifdef ENABLE_SERIAL_DEBUG
+
 		Serial.print("Published metric ");
 		Serial.print(METRICS[i].name);
 		Serial.print(" with value ");
@@ -293,6 +328,7 @@ void process_message()
 		Serial.print(" and scaler ");
 		Serial.print((int)values[i].scaler);
 		Serial.println(".");
+#endif
 	}
 
 	// Start over
@@ -303,22 +339,33 @@ void run_current_state()
 {
 	if (state != NULL)
 	{
+
 		if ((millis() - last_state_reset) > (READ_TIMEOUT * 1000))
 		{
+#ifdef ENABLE_SERIAL_DEBUG
+
 			Serial.print("Did not receive a message within ");
 			Serial.print(READ_TIMEOUT);
 			Serial.println(" seconds, starting over.");
+#endif
 			reset();
 		}
+		//Serial.print("State runner: "); Serial.println(millis());
+
 		state();
 	}
 }
 
 void setup()
 {
-	// Setup serial stuff
+// Setup serial stuff
+#ifdef ENABLE_SERIAL_DEBUG
 	Serial.begin(115200);
+#endif
 	sensor.begin(9600);
+	sensor.enableTx(false);
+	sensor.enableRx(true);
+	sensor.enableIntTx(false);
 
 	// OneWire
 	owHub.attach(owBae910);
@@ -331,11 +378,13 @@ void setup()
 
 void loop()
 {
-	// Run application's current state
-	run_current_state();
-
 	// OneWire
 	owHub.poll();
-	if (owHub.hasError())
-		owHub.printError();
+
+	// Run current application state
+	if ((loop_counter++ % 64) == 0)
+	{
+		// Throttled
+		run_current_state();
+	}
 }
