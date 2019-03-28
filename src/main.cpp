@@ -7,24 +7,11 @@
 #include "OneWireHub.h"
 #include "BAE910.h"
 
-//#define ENABLE_SERIAL_DEBUG
 #ifdef ENABLE_SERIAL_DEBUG
 const bool VERBOSE = false;
 #endif
 const uint8_t SENSOR_PIN = 4;
 const uint8_t ONEWIRE_PIN = 0;
-
-const byte START_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01};
-const byte END_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x1A};
-const size_t BUFFER_SIZE = 3840; // Max datagram duration 400ms at 9600 Baud
-const uint8_t READ_TIMEOUT = 30;
-
-struct metric_value
-{
-	int64_t value;
-	uint8_t unit;
-	int8_t scaler;
-};
 
 struct metric
 {
@@ -36,7 +23,20 @@ const metric METRICS[] = {
 	{"power_in", {0x77, 0x07, 0x01, 0x00, 0x01, 0x08, 0x00, 0xFF}},
 	{"power_out", {0x77, 0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xFF}},
 	{"power_current", {0x77, 0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xFF}}};
+
+const byte START_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01};
+const byte END_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x1A};
 const uint8_t NUM_OF_METRICS = sizeof(METRICS) / sizeof(metric);
+const size_t BUFFER_SIZE = 3840; // Max datagram duration 400ms at 9600 Baud
+const uint8_t READ_TIMEOUT = 30;
+
+struct metric_value
+{
+	int64_t value;
+	uint8_t unit;
+	int8_t scaler;
+};
+
 
 // States
 void wait_for_start_sequence();
