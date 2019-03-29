@@ -1,5 +1,5 @@
 # SMLReader
-ESP8266 based SmartMeter (SML) to OneWire gateway
+ESP8266 based SmartMeter (SML) to 1-Wire gateway
 
 ## Description
 The aim of this project is to read the meter readings of modern energy meters and make them available via the 1-Wire bus.
