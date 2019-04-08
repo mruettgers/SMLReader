@@ -4,11 +4,12 @@
 #include <FastCRC.h>
 #include <string.h>
 #include <vector>
+#include <list>
 #include "OneWireHub.h"
 #include "BAE910.h"
 
 #ifdef ENABLE_SERIAL_DEBUG
-const bool VERBOSE = false;
+const bool VERBOSE = true;
 #endif
 const uint8_t SENSOR_PIN = 4;
 const uint8_t ONEWIRE_PIN = 0;
