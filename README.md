@@ -21,7 +21,7 @@ The emulation of the 1-Wire slave device is realized by the use of [OneWireHub](
 ### Reading head
 
 The reading head consists of a phototransistor (BPW 40) and a 1 kΩ pull-up resistor connected to one of the GPIO pins of the microcontroller.
-Other phototransistors and the use of an internal pull-up resistor will probably also work, but I did not test it so far.
+Other phototransistors and the use of an internal pull-up resistor will probably work, too, but I have not test it so far.
 
 The housing of my reading head has been 3D-printed using the [STL files](http://www.stefan-weigert.de/php_loader/sml.php) from [Stefan Weigert](http://www.stefan-weigert.de). 
 
@@ -29,8 +29,11 @@ A ring magnet (in my case dimensioned 27x21x3mm) ensures that the reading head k
 
 The phototransistor has been fixed with hot glue within the housing.
 
+![Reading Head](doc/media/SMLReader_Img_ReadingHead_small.jpg "Reading Head") ![Reading Head](doc/media/SMLReader_Img_ReadingHead_Close_small.jpg "Reading Head")
+
 ### Microcontroller
 
+![Microcontroller](doc/media/SMLReader_Img_Microcontroller_small.jpg "Microcontroller")
 ## Software
 
 ### Customization
