@@ -382,10 +382,6 @@ void loop()
 	// OneWire
 	owHub.poll();
 
-	// Run current application state
-	if ((loop_counter++ % 64) == 0)
-	{
-		// Throttled
-		run_current_state();
-	}
+	// SMLReader
+	run_current_state();
 }
