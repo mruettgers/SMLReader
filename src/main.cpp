@@ -38,7 +38,6 @@ struct metric_value
 	int8_t scaler;
 };
 
-
 // States
 void wait_for_start_sequence();
 void read_message();
@@ -64,8 +63,8 @@ union {
 } const chip_id = {ESP.getChipId()};
 
 // OneWire
-auto owHub = OneWireHub(ONEWIRE_PIN);
-auto owBae910 = BAE910(BAE910::family_code, 'S', 'M', 'L', chip_id.fields[0], chip_id.fields[1], chip_id.fields[2]);
+OneWireHub owHub = OneWireHub(ONEWIRE_PIN);
+std::list<BAE910 *> owSlaveDevices;
 
 // Wrappers for sensor access
 int data_available()
@@ -290,32 +289,28 @@ void process_message()
 
 	// Publish
 	int32_t value;
+	std::list<BAE910 *>::iterator owSlaveDevice = owSlaveDevices.begin();
+	uint8_t slot = 0;
 	for (uint8_t i = 0; i < NUM_OF_METRICS; i++)
 	{
+
 		value = (uint32_t)((values[i].value * (pow(10, values[i].scaler))) * 1000);
-		switch (i)
+		switch (slot++)
 		{
 		case 0:
-			owBae910.memory.field.userm = value;
+			(*owSlaveDevice)->memory.field.userm = value;
 			break;
 		case 1:
-			owBae910.memory.field.usern = value;
+			(*owSlaveDevice)->memory.field.usern = value;
 			break;
 		case 2:
-			owBae910.memory.field.usero = value;
+			(*owSlaveDevice)->memory.field.usero = value;
 			break;
 		case 3:
-			owBae910.memory.field.userp = value;
+			(*owSlaveDevice)->memory.field.userp = value;
 			break;
 		default:
-#ifdef ENABLE_SERIAL_DEBUG
-
-			Serial.print("Error: Num of metrics exceeds the num of available 32 bit slots of the BAE910.");
-			Serial.print(" Ignoring metric ");
-			Serial.print(METRICS[i].name);
-			Serial.println(".");
-#endif
-			continue;
+			break;
 		}
 
 #ifdef ENABLE_SERIAL_DEBUG
@@ -328,8 +323,23 @@ void process_message()
 		Serial.print((int)values[i].unit);
 		Serial.print(" and scaler ");
 		Serial.print((int)values[i].scaler);
+		Serial.print(" via device");
+		for (int j = 0; j < 7; j++)
+		{
+			Serial.print(" 0x");
+			Serial.print((*owSlaveDevice)->ID[j], HEX);
+		}
+		Serial.print(" and slot ");
+		Serial.print(slot);
 		Serial.println(".");
 #endif
+
+		if ((i + 1) % 4 == 0)
+		{
+			// Available slots reached, use next device
+			owSlaveDevice++;
+			slot = 0;
+		}
 	}
 
 	// Start over
@@ -368,10 +378,16 @@ void setup()
 	sensor.enableRx(true);
 	sensor.enableIntTx(false);
 
-	// OneWire
-	owHub.attach(owBae910);
-	owBae910.memory.field.SW_VER = 0x01;
-	owBae910.memory.field.BOOTSTRAP_VER = 0x01;
+	// Because we have only 4 32 bit registers we will add multiple slave devices to the hub if required
+	BAE910 *owDevice;
+	for (int i = 0; NUM_OF_METRICS > 0 && i <= ((NUM_OF_METRICS - 1) / 4); i++)
+	{
+		owDevice = new BAE910(BAE910::family_code, 'S', 'M', i, chip_id.fields[0], chip_id.fields[1], chip_id.fields[2]);
+		owSlaveDevices.push_back(owDevice);
+		owDevice->memory.field.SW_VER = 0x01;
+		owDevice->memory.field.BOOTSTRAP_VER = 0x01;
+		owHub.attach(*owDevice);
+	}
 
 	// Set initial state
 	set_state(wait_for_start_sequence);
