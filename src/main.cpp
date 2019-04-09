@@ -1,42 +1,18 @@
-#include <Arduino.h>
+#include "config.h"
+#include "debug.h"
 
+// Third party dependencies
 #include <SoftwareSerial.h>
 #include <FastCRC.h>
-#include <string.h>
-#include <vector>
-#include <list>
 #include "OneWireHub.h"
 #include "BAE910.h"
 
-#ifdef ENABLE_SERIAL_DEBUG
-const bool VERBOSE = true;
-#endif
-const uint8_t SENSOR_PIN = 4;
-const uint8_t ONEWIRE_PIN = 0;
-
-struct metric
-{
-	const char *name;
-	const std::vector<byte> pattern;
-};
-
-const metric METRICS[] = {
-	{"power_in", {0x77, 0x07, 0x01, 0x00, 0x01, 0x08, 0x00, 0xFF}},
-	{"power_out", {0x77, 0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xFF}},
-	{"power_current", {0x77, 0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xFF}}};
-
+// Constants
 const byte START_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01};
 const byte END_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x1A};
 const uint8_t NUM_OF_METRICS = sizeof(METRICS) / sizeof(metric);
 const size_t BUFFER_SIZE = 3840; // Max datagram duration 400ms at 9600 Baud
 const uint8_t READ_TIMEOUT = 30;
-
-struct metric_value
-{
-	int64_t value;
-	uint8_t unit;
-	int8_t scaler;
-};
 
 // States
 void wait_for_start_sequence();
@@ -76,52 +52,27 @@ int data_read()
 	return sensor.read();
 }
 
-// Debug stuff
-#ifdef ENABLE_SERIAL_DEBUG
-
-void dump_buffer()
-{
-	Serial.println("----DATA----");
-	for (size_t i = 0; i < position; i++)
-	{
-		Serial.print("0x");
-		Serial.print(buffer[i], HEX);
-		Serial.print(" ");
-	}
-	Serial.println();
-	Serial.println("---END_OF_DATA---");
-}
-#endif
-
 // Set state
 void set_state(void (*new_state)())
 {
 	if (new_state == wait_for_start_sequence)
 	{
-#ifdef ENABLE_SERIAL_DEBUG
-		Serial.println("State is 'wait_for_start_sequence'.");
-#endif
+		DEBUG("State is 'wait_for_start_sequence'.");
 		last_state_reset = millis();
 		position = 0;
 	}
 	else if (new_state == read_message)
 	{
-#ifdef ENABLE_SERIAL_DEBUG
-		Serial.println("State is 'read_message'.");
-#endif
+		DEBUG("State is 'read_message'.");
 	}
 	else if (new_state == read_checksum)
 	{
-#ifdef ENABLE_SERIAL_DEBUG
-		Serial.println("State is 'read_checksum'.");
-#endif
+		DEBUG("State is 'read_checksum'.");
 		bytes_until_checksum = 3;
 	}
 	else if (new_state == process_message)
 	{
-#ifdef ENABLE_SERIAL_DEBUG
-		Serial.println("State is 'process_message'.");
-#endif
+		DEBUG("State is 'process_message'.");
 	};
 	state = new_state;
 }
@@ -129,12 +80,10 @@ void set_state(void (*new_state)())
 // Start over and wait for the start sequence
 void reset(const char *message = NULL)
 {
-#ifdef ENABLE_SERIAL_DEBUG
 	if (message != NULL && strlen(message) > 0)
 	{
-		Serial.println(message);
+		DEBUG(message);
 	}
-#endif
 	set_state(wait_for_start_sequence);
 }
 
@@ -149,11 +98,8 @@ void wait_for_start_sequence()
 		position = (buffer[position] == START_SEQUENCE[position]) ? (position + 1) : 0;
 		if (position == sizeof(START_SEQUENCE))
 		{
-// Start sequence has been found
-#ifdef ENABLE_SERIAL_DEBUG
-			if (VERBOSE)
-				Serial.println("Start sequence found.");
-#endif
+			// Start sequence has been found
+			DEBUG("Start sequence found.");
 			set_state(read_message);
 			return;
 		}
@@ -184,11 +130,7 @@ void read_message()
 			}
 			if (i == last_index_of_end_seq)
 			{
-#ifdef ENABLE_SERIAL_DEBUG
-
-				if (VERBOSE)
-					Serial.println("End sequence found.");
-#endif
+				DEBUG("End sequence found.");
 				set_state(read_checksum);
 				return;
 			}
@@ -208,14 +150,8 @@ void read_checksum()
 
 	if (bytes_until_checksum == 0)
 	{
-#ifdef ENABLE_SERIAL_DEBUG
-
-		if (VERBOSE)
-		{
-			Serial.println("Message has been read.");
-			dump_buffer();
-		}
-#endif
+		DEBUG("Message has been read.");
+		DEBUG_DUMP_BUFFER(buffer, position);
 		set_state(process_message);
 	}
 }
@@ -246,12 +182,7 @@ void process_message()
 
 		if (found_at != NULL)
 		{
-#ifdef ENABLE_SERIAL_DEBUG
-
-			Serial.print("Found metric ");
-			Serial.print(METRICS[i].name);
-			Serial.println(".");
-#endif
+			DEBUG("Found metric '%s.'", METRICS[i].name);
 			cp = (byte *)(found_at) + pattern_size;
 
 			// Ingore status byte
@@ -313,26 +244,16 @@ void process_message()
 			break;
 		}
 
-#ifdef ENABLE_SERIAL_DEBUG
-
-		Serial.print("Published metric ");
-		Serial.print(METRICS[i].name);
-		Serial.print(" with value ");
-		Serial.print((long)values[i].value);
-		Serial.print(", unit ");
-		Serial.print((int)values[i].unit);
-		Serial.print(" and scaler ");
-		Serial.print((int)values[i].scaler);
-		Serial.print(" via device");
-		for (int j = 0; j < 7; j++)
-		{
-			Serial.print(" 0x");
-			Serial.print((*owSlaveDevice)->ID[j], HEX);
-		}
-		Serial.print(" and slot ");
-		Serial.print(slot);
-		Serial.println(".");
-#endif
+		DEBUG("Published metric '%s':", METRICS[i].name);
+		DEBUG("  Value: %ld", (long)values[i].value);
+		DEBUG("  Unit: %d", (int)values[i].unit);
+		DEBUG("  Scaler: %d", (int)values[i].scaler);
+		DEBUG("  Device: %02X%02X%02X%02X%02X%02X%02X%02X",
+			  (*owSlaveDevice)->ID[0], (*owSlaveDevice)->ID[1],
+			  (*owSlaveDevice)->ID[2], (*owSlaveDevice)->ID[3],
+			  (*owSlaveDevice)->ID[4], (*owSlaveDevice)->ID[5],
+			  (*owSlaveDevice)->ID[6], (*owSlaveDevice)->ID[7]);
+		DEBUG("  Slot: %d", (int)slot);
 
 		if ((i + 1) % 4 == 0)
 		{
@@ -353,31 +274,25 @@ void run_current_state()
 
 		if ((millis() - last_state_reset) > (READ_TIMEOUT * 1000))
 		{
-#ifdef ENABLE_SERIAL_DEBUG
-
-			Serial.print("Did not receive a message within ");
-			Serial.print(READ_TIMEOUT);
-			Serial.println(" seconds, starting over.");
-#endif
+			DEBUG("Did not receive a message within %d seconds, starting over.", READ_TIMEOUT);
 			reset();
 		}
-		//Serial.print("State runner: "); Serial.println(millis());
-
 		state();
 	}
 }
 
 void setup()
 {
-// Setup serial stuff
-#ifdef ENABLE_SERIAL_DEBUG
-	Serial.begin(115200);
-#endif
+	// Setup debugging stuff
+	SERIAL_DEBUG_SETUP(115200);
+
+	// Setup reading head
 	sensor.begin(9600);
 	sensor.enableTx(false);
 	sensor.enableRx(true);
 	sensor.enableIntTx(false);
 
+	// Setup OneWire
 	// Because we have only 4 32 bit registers we will add multiple slave devices to the hub if required
 	BAE910 *owDevice;
 	for (int i = 0; NUM_OF_METRICS > 0 && i <= ((NUM_OF_METRICS - 1) / 4); i++)
