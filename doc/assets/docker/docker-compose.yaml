@@ -1,0 +1,75 @@
+version: '3'
+services:
+  mosquitto:
+    image: mruettgers/rpi-mosquitto
+    restart: unless-stopped
+    networks:
+      services:
+        ipv4_address: 10.4.32.103
+      backend:
+    logging:
+      options:
+        tag: mosquitto
+
+  nodered:
+    image: mruettgers/rpi-nodered
+    restart: unless-stopped
+    volumes:
+      - ./nodered/data/:/data/
+    networks:
+      frontend:
+      services:
+        ipv4_address: 10.4.32.105
+      backend:
+      proxy:
+    links:
+      - mosquitto
+    logging:
+      options:
+        tag: nodered
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy_backend
+      - traefik.webif.frontend.rule=Host:nodered.home
+      - traefik.webif.port=1880
+
+  owserver:
+    image: mruettgers/rpi-owfs
+    restart: unless-stopped
+    networks:
+      backend:
+      services:
+        ipv4_address: 10.4.32.107
+    command: owserver --usb=ALL --foreground
+    devices:
+      - /dev/bus/usb
+    logging:
+      options:
+        tag: owserver
+
+  owhttpd:
+    image: mruettgers/rpi-owfs
+    restart: unless-stopped
+    depends_on:
+      - owserver
+    links:
+      - owserver
+    networks:
+      backend:
+      services:
+        ipv4_address: 10.4.32.108
+    command: owhttpd --foreground -p 80 -s 10.4.32.107
+    logging:
+      options:
+        tag: owhttpd
+
+networks:
+  frontend:
+  backend:
+    internal: true
+  proxy:
+    external:
+      name: proxy_backend
+  services:
+    external:
+      name: services
