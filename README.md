@@ -68,7 +68,7 @@ The metrics are read at given intervals by a Node-RED flow and are then publishe
 The source of the flow can be found [here](doc/assets/nodered/nodered_flow_ow.json).
 
 ### Re-publishing for time series database processing
-Another Node-RED flow re-publishes the metrics for being consumed by [InfluxDB](https://github.com/influxdata/influxdb) and especially by it's data collector [Telegraf](https://github.com/influxdata/telegraf).
+Another Node-RED flow re-publishes the metrics for being consumed by [InfluxDB](https://github.com/influxdata/influxdb) and especially by its data collector [Telegraf](https://github.com/influxdata/telegraf).
 
 ![Schematic diagram](doc/assets/nodered/nodered_flow_metrics_small.png)
 
