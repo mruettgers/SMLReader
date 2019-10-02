@@ -73,4 +73,4 @@ Another Node-RED flow re-publishes the metrics for being consumed by [InfluxDB](
 ![Schematic diagram](doc/assets/nodered/nodered_flow_metrics_small.png)
 
 The source of the flow can be found [here](doc/assets/nodered/nodered_flow_metrics.json).  
-A Telegraf configuration example can be found [here](doc/assets/telegraf/telegraf_config.conf).
+A Telegraf configuration example can be found [here](doc/assets/telegraf/telegraf.conf).
