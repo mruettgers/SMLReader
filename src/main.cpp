@@ -5,10 +5,12 @@
 #include <SoftwareSerial.h>
 #include <FastCRC.h>
 
-#ifdef PUBLISHER_ONEWIRE
+#ifdef MODE_ONEWIRE
 #include "publishers/onewire_publisher.h"
 #else
+#include <IotWebConf.h>
 #include "publishers/mqtt_publisher.h"
+#include "EEPROM.h"
 #endif
 
 // Constants
@@ -26,13 +28,23 @@ void process_message();
 // Serial device
 SoftwareSerial sensor(SENSOR_PIN, -1, false, BUFFER_SIZE, BUFFER_SIZE);
 
-// Publisher
-#ifdef PUBLISHER_ONEWIRE
-OneWirePublisher publisher(ONEWIRE_PIN);
+#ifdef MODE_ONEWIRE
+OneWirePublisher publisher;
 #else
-MqttPublisher publisher();
-#endif
+void wifiConnected();
+void configSaved();
 
+DNSServer dnsServer;
+WebServer server(80);
+HTTPUpdateServer httpUpdater;
+WiFiClient net;
+
+IotWebConf iotWebConf("SMLReader", &dnsServer, &server, "", VERSION);
+boolean needReset = false;
+boolean connected = false;
+
+MqttPublisher publisher;
+#endif
 
 // Helpers
 FastCRC16 CRC16;
@@ -42,7 +54,6 @@ unsigned long last_state_reset = 0;
 uint8_t bytes_until_checksum = 0;
 uint8_t loop_counter = 0;
 void (*state)() = NULL;
-
 
 // Wrappers for sensor access
 int data_available()
@@ -233,7 +244,7 @@ void run_current_state()
 
 		if ((millis() - last_state_reset) > (READ_TIMEOUT * 1000))
 		{
-			DEBUG("Did not receive a message within %d seconds, starting over.", READ_TIMEOUT);
+			DEBUG("Did not receive an SML message within %d seconds, starting over.", READ_TIMEOUT);
 			reset();
 		}
 		state();
@@ -243,7 +254,7 @@ void run_current_state()
 void setup()
 {
 	// Setup debugging stuff
-	SERIAL_DEBUG_SETUP(115200);
+	SERIAL_DEBUG_SETUP(9600);
 
 	// Setup reading head
 	sensor.begin(9600);
@@ -251,16 +262,99 @@ void setup()
 	sensor.enableRx(true);
 	sensor.enableIntTx(false);
 
-	publisher.setup();
+	// Initialize publisher
+#ifdef MODE_ONEWIRE
+	DEBUG("Setting up 1wire publisher.")
+	publisher.setup(ONEWIRE_PIN);
+#else
+	// Setup WiFiManager
+	DEBUG("Setting up IotWebConf.");
+
+	delay(2000);
+
+	MqttConfig mqttConfig;
+
+	IotWebConfParameter params[] = {
+		IotWebConfParameter("MQTT server", "mqtt_server", mqttConfig.server, sizeof(mqttConfig.server)),
+		IotWebConfParameter("MQTT port", "mqtt_port", mqttConfig.port, sizeof(mqttConfig.port)),
+		IotWebConfParameter("MQTT username", "mqtt_username", mqttConfig.username, sizeof(mqttConfig.username)),
+		IotWebConfParameter("MQTT password", "mqtt_password", mqttConfig.password, sizeof(mqttConfig.password)),
+		IotWebConfParameter("MQTT topic", "mqtt_topic", mqttConfig.topic, sizeof(mqttConfig.topic))};
+
+
+	iotWebConf.setStatusPin(STATUS_PIN);
+	for (uint8_t i = 0; i < sizeof(params) / sizeof(params[0]); i++)
+	{
+		DEBUG("Added parameter %s.", params[i].label);
+		iotWebConf.addParameter(&params[i]);
+	}
+	iotWebConf.setConfigSavedCallback(&configSaved);
+	iotWebConf.setWifiConnectionCallback(&wifiConnected);
+	iotWebConf.setupUpdateServer(&httpUpdater);
+
+	boolean validConfig = iotWebConf.init();
+	if (!validConfig) {
+		DEBUG("Missing or invalid config. MQTT publisher disabled.");
+		mqttConfig.server[0] = '\0';
+		mqttConfig.port[0] = '\0';
+		mqttConfig.username[0] = '\0';
+		mqttConfig.password[0] = '\0';
+		mqttConfig.topic[0] = '\0';
+	}
+	else {
+		DEBUG("Setting up MQTT publisher.");
+		//publisher.setup(mqttConfig);	
+	}
+
+	server.on("/", [] { iotWebConf.handleConfig(); });
+	server.onNotFound([]() { iotWebConf.handleNotFound(); });
+
+#endif
 
 	// Set initial state
 	set_state(wait_for_start_sequence);
+	DEBUG("Ready.");
 }
 
 void loop()
 {
+	// Publisher
 	publisher.loop();
 
+#ifdef MODE_ONEWIRE
 	// SMLReader
 	run_current_state();
+#else
+	if (connected) {
+		run_current_state();
+	}
+#endif
+
+#ifndef MODE_ONEWIRE
+	iotWebConf.doLoop();
+
+	if (needReset)
+	{
+		DEBUG("Rebooting after 1 second.");
+		delay(1000);
+		ESP.restart();
+	}
+
+#endif
 }
+
+#ifndef MODE_ONEWIRE
+void configSaved()
+{
+	DEBUG("Configuration was updated.");
+	needReset = true;
+}
+
+void wifiConnected()
+{
+  DEBUG("WiFi connection established.");
+  connected = true;
+  publisher.connect();
+}
+
+#endif

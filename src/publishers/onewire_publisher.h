@@ -1,7 +1,8 @@
 #ifndef onewire_publisher_h
 #define onewire_publisher_h
 
-#include "publisher.h"
+#include "config.h"
+#include "debug.h"
 
 #include "OneWireHub.h"
 #include "BAE910.h"
@@ -12,13 +13,10 @@ union {
 	uint8_t fields[4];
 } const chip_id = {ESP.getChipId()};
 
-class OneWirePublisher : Publisher
-{
+class OneWirePublisher {
   public:
-    OneWirePublisher(int pin): Publisher() {
-      owHub = new OneWireHub(pin);
-    }
-    void setup() {
+    void setup(int pin) {
+       owHub = new OneWireHub(pin);
        // Because we have only 4 32 bit registers we will add multiple slave devices to the hub if required
        BAE910 *owDevice;
        for (int i = 0; NUM_OF_METRICS > 0 && i <= ((NUM_OF_METRICS - 1) / 4); i++)

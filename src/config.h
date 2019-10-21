@@ -3,8 +3,11 @@
 
 #include <types.h>
 
+const char* VERSION = "1.0.2";
+
 const uint8_t SENSOR_PIN = 4;
 const uint8_t ONEWIRE_PIN = 0;
+const uint8_t STATUS_PIN = LED_BUILTIN;
 
 static const metric METRICS[] = {
     {"power_in", {0x77, 0x07, 0x01, 0x00, 0x01, 0x08, 0x00, 0xFF}},

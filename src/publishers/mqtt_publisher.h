@@ -1,14 +1,25 @@
 #ifndef mqtt_publisher_h
 #define mqtt_publisher_h
 
-#include "publisher.h"
+#include "config.h"
+#include "debug.h"
+#include "MQTT.h"
 
-class MqttPublisher : Publisher
+struct MqttConfig {
+    char server[128] = "mosquitto";
+    char port[8] = "1883";
+    char username[128];
+    char password[128];
+    char topic[128] = "iot/smartmeter/";
+};
+
+class MqttPublisher
 {
   public:
-    MqttPublisher(): Publisher() {
+    void setup(MqttConfig _config) {
+        config = _config;
     }
-    void setup() {
+    void connect() {
     }
     void loop() {
     }
@@ -27,6 +38,7 @@ class MqttPublisher : Publisher
         }
     }
   private:
+    MqttConfig config;
 };
 
 
