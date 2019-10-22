@@ -13,7 +13,7 @@
 #include "EEPROM.h"
 #endif
 
-// Constants
+// SML constants
 const byte START_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01};
 const byte END_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x1A};
 const size_t BUFFER_SIZE = 3840; // Max datagram duration 400ms at 9600 Baud
@@ -39,11 +39,25 @@ WebServer server(80);
 HTTPUpdateServer httpUpdater;
 WiFiClient net;
 
+MqttConfig mqttConfig;
+MqttPublisher publisher;
+
+/**   const char* label, const char* id, char* valueBuffer, int length,
+    const char* type = "text", const char* placeholder = NULL,
+    const char* defaultValue = NULL, const char* customHtml = NULL,
+    boolean visible = true);
+	**/
 IotWebConf iotWebConf("SMLReader", &dnsServer, &server, "", VERSION);
+IotWebConfParameter params[] = {
+	IotWebConfParameter("MQTT server", "mqttServer", mqttConfig.server, sizeof(mqttConfig.server), "text", NULL, mqttConfig.server, NULL, true),
+	IotWebConfParameter("MQTT port", "mqttPort", mqttConfig.port, sizeof(mqttConfig.port), "text", NULL, mqttConfig.port, NULL, true),
+	IotWebConfParameter("MQTT username", "mqttUsername", mqttConfig.username, sizeof(mqttConfig.username), "text", NULL, mqttConfig.mqttUsername, NULL, true),
+	IotWebConfParameter("MQTT password", "mqttPassword", mqttConfig.password, sizeof(mqttConfig.password), "password", NULL, mqttConfig.password, NULL, true),
+	IotWebConfParameter("MQTT topic", "mqttTopic", mqttConfig.topic, sizeof(mqttConfig.topic)), "text", NULL, mqttConfig.topic, NULL, true};
+
 boolean needReset = false;
 boolean connected = false;
 
-MqttPublisher publisher;
 #endif
 
 // Helpers
@@ -90,6 +104,12 @@ void set_state(void (*new_state)())
 	state = new_state;
 }
 
+// Initialize state machine
+void init()
+{
+	set_state(wait_for_start_sequence);
+}
+
 // Start over and wait for the start sequence
 void reset(const char *message = NULL)
 {
@@ -97,7 +117,7 @@ void reset(const char *message = NULL)
 	{
 		DEBUG(message);
 	}
-	set_state(wait_for_start_sequence);
+	init();
 }
 
 // Wait for the start_sequence to appear
@@ -264,24 +284,13 @@ void setup()
 
 	// Initialize publisher
 #ifdef MODE_ONEWIRE
-	DEBUG("Setting up 1wire publisher.")
+	// Setup 1wire publisher
 	publisher.setup(ONEWIRE_PIN);
+	init();
 #else
-	// Setup WiFiManager
-	DEBUG("Setting up IotWebConf.");
-
+	// Setup WiFi and config stuff
+	DEBUG("Setting up WiFi and config stuff.");
 	delay(2000);
-
-	MqttConfig mqttConfig;
-
-	IotWebConfParameter params[] = {
-		IotWebConfParameter("MQTT server", "mqtt_server", mqttConfig.server, sizeof(mqttConfig.server)),
-		IotWebConfParameter("MQTT port", "mqtt_port", mqttConfig.port, sizeof(mqttConfig.port)),
-		IotWebConfParameter("MQTT username", "mqtt_username", mqttConfig.username, sizeof(mqttConfig.username)),
-		IotWebConfParameter("MQTT password", "mqtt_password", mqttConfig.password, sizeof(mqttConfig.password)),
-		IotWebConfParameter("MQTT topic", "mqtt_topic", mqttConfig.topic, sizeof(mqttConfig.topic))};
-
-
 	iotWebConf.setStatusPin(STATUS_PIN);
 	for (uint8_t i = 0; i < sizeof(params) / sizeof(params[0]); i++)
 	{
@@ -293,27 +302,28 @@ void setup()
 	iotWebConf.setupUpdateServer(&httpUpdater);
 
 	boolean validConfig = iotWebConf.init();
-	if (!validConfig) {
+	if (!validConfig)
+	{
 		DEBUG("Missing or invalid config. MQTT publisher disabled.");
-		mqttConfig.server[0] = '\0';
-		mqttConfig.port[0] = '\0';
-		mqttConfig.username[0] = '\0';
-		mqttConfig.password[0] = '\0';
-		mqttConfig.topic[0] = '\0';
+		MqttConfig defaults;
+		// Resetting to default values
+		strcpy(mqttConfig.server, defaults.server);
+		strcpy(mqttConfig.port, defaults.port);
+		strcpy(mqttConfig.username, defaults.username);
+		strcpy(mqttConfig.password, defaults.password);
+		strcpy(mqttConfig.topic, defaults.topics);
 	}
-	else {
-		DEBUG("Setting up MQTT publisher.");
-		//publisher.setup(mqttConfig);	
+	else
+	{
+		// Setup MQTT publisher
+		publisher.setup(mqttConfig);
 	}
 
 	server.on("/", [] { iotWebConf.handleConfig(); });
 	server.onNotFound([]() { iotWebConf.handleNotFound(); });
 
 #endif
-
-	// Set initial state
-	set_state(wait_for_start_sequence);
-	DEBUG("Ready.");
+	DEBUG("Setup done.");
 }
 
 void loop()
@@ -322,24 +332,22 @@ void loop()
 	publisher.loop();
 
 #ifdef MODE_ONEWIRE
-	// SMLReader
+	// SMLReader state machine
 	run_current_state();
 #else
-	if (connected) {
-		run_current_state();
-	}
-#endif
-
-#ifndef MODE_ONEWIRE
-	iotWebConf.doLoop();
-
 	if (needReset)
 	{
+		// Doing a chip reset caused by config changes
 		DEBUG("Rebooting after 1 second.");
 		delay(1000);
 		ESP.restart();
 	}
-
+	if (connected)
+	{
+		// SMLReader state machine
+		run_current_state();
+	}
+	iotWebConf.doLoop();
 #endif
 }
 
@@ -352,9 +360,10 @@ void configSaved()
 
 void wifiConnected()
 {
-  DEBUG("WiFi connection established.");
-  connected = true;
-  publisher.connect();
+	DEBUG("WiFi connection established.");
+	connected = true;
+	publisher.connect();
+	init();
 }
 
 #endif
