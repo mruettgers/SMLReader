@@ -270,7 +270,7 @@ void run_current_state()
 void setup()
 {
 	// Setup debugging stuff
-	SERIAL_DEBUG_SETUP(9600);
+	SERIAL_DEBUG_SETUP(115200);
 
 	// Setup reading head
 	sensor.begin(9600);
@@ -326,10 +326,12 @@ void loop()
 {
 	// Publisher
 	publisher.loop();
+	yield();
 
 #ifdef MODE_ONEWIRE
 	// SMLReader state machine
 	run_current_state();
+	yield();
 #else
 	if (needReset)
 	{
@@ -342,8 +344,10 @@ void loop()
 	{
 		// SMLReader state machine
 		run_current_state();
+		yield();
 	}
 	iotWebConf.doLoop();
+	yield();
 #endif
 }
 
