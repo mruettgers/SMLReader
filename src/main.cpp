@@ -43,7 +43,7 @@ WiFiClient net;
 MqttConfig mqttConfig;
 MqttPublisher publisher;
 
-IotWebConf iotWebConf("SMLReader", &dnsServer, &server, "", VERSION);
+IotWebConf iotWebConf("SMLReader", &dnsServer, &server, "", CONFIG_VERSION);
 IotWebConfParameter params[] = {
 	IotWebConfParameter("MQTT server", "mqttServer", mqttConfig.server, sizeof(mqttConfig.server), "text", NULL, mqttConfig.server, NULL, true),
 	IotWebConfParameter("MQTT port", "mqttPort", mqttConfig.port, sizeof(mqttConfig.port), "text", NULL, mqttConfig.port, NULL, true),
