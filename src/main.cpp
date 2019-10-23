@@ -51,9 +51,9 @@ IotWebConf iotWebConf("SMLReader", &dnsServer, &server, "", VERSION);
 IotWebConfParameter params[] = {
 	IotWebConfParameter("MQTT server", "mqttServer", mqttConfig.server, sizeof(mqttConfig.server), "text", NULL, mqttConfig.server, NULL, true),
 	IotWebConfParameter("MQTT port", "mqttPort", mqttConfig.port, sizeof(mqttConfig.port), "text", NULL, mqttConfig.port, NULL, true),
-	IotWebConfParameter("MQTT username", "mqttUsername", mqttConfig.username, sizeof(mqttConfig.username), "text", NULL, mqttConfig.mqttUsername, NULL, true),
+	IotWebConfParameter("MQTT username", "mqttUsername", mqttConfig.username, sizeof(mqttConfig.username), "text", NULL, mqttConfig.username, NULL, true),
 	IotWebConfParameter("MQTT password", "mqttPassword", mqttConfig.password, sizeof(mqttConfig.password), "password", NULL, mqttConfig.password, NULL, true),
-	IotWebConfParameter("MQTT topic", "mqttTopic", mqttConfig.topic, sizeof(mqttConfig.topic)), "text", NULL, mqttConfig.topic, NULL, true};
+	IotWebConfParameter("MQTT topic", "mqttTopic", mqttConfig.topic, sizeof(mqttConfig.topic), "text", NULL, mqttConfig.topic, NULL, true)};
 
 boolean needReset = false;
 boolean connected = false;
@@ -105,19 +105,19 @@ void set_state(void (*new_state)())
 }
 
 // Initialize state machine
-void init()
+void init_state()
 {
 	set_state(wait_for_start_sequence);
 }
 
 // Start over and wait for the start sequence
-void reset(const char *message = NULL)
+void reset_state(const char *message = NULL)
 {
 	if (message != NULL && strlen(message) > 0)
 	{
 		DEBUG(message);
 	}
-	init();
+	init_state();
 }
 
 // Wait for the start_sequence to appear
@@ -147,7 +147,7 @@ void read_message()
 		// Check whether the buffer is still big enough to hold the number of fill bytes (1 byte) and the checksum (2 bytes)
 		if ((position + 3) == BUFFER_SIZE)
 		{
-			reset("Buffer will overflow, starting over.");
+			reset_state("Buffer will overflow, starting over.");
 			return;
 		}
 		buffer[position++] = data_read();
@@ -198,7 +198,7 @@ void process_message()
 
 	if (calculated_checksum != given_checksum)
 	{
-		reset("Checksum mismatch, starting over.");
+		reset_state("Checksum mismatch, starting over.");
 		return;
 	}
 
@@ -254,7 +254,7 @@ void process_message()
 	publisher.publish(values);
 
 	// Start over
-	reset();
+	reset_state();
 }
 
 void run_current_state()
@@ -265,7 +265,7 @@ void run_current_state()
 		if ((millis() - last_state_reset) > (READ_TIMEOUT * 1000))
 		{
 			DEBUG("Did not receive an SML message within %d seconds, starting over.", READ_TIMEOUT);
-			reset();
+			reset_state();
 		}
 		state();
 	}
@@ -286,7 +286,7 @@ void setup()
 #ifdef MODE_ONEWIRE
 	// Setup 1wire publisher
 	publisher.setup(ONEWIRE_PIN);
-	init();
+	init_state();
 #else
 	// Setup WiFi and config stuff
 	DEBUG("Setting up WiFi and config stuff.");
@@ -311,7 +311,7 @@ void setup()
 		strcpy(mqttConfig.port, defaults.port);
 		strcpy(mqttConfig.username, defaults.username);
 		strcpy(mqttConfig.password, defaults.password);
-		strcpy(mqttConfig.topic, defaults.topics);
+		strcpy(mqttConfig.topic, defaults.topic);
 	}
 	else
 	{
@@ -363,7 +363,7 @@ void wifiConnected()
 	DEBUG("WiFi connection established.");
 	connected = true;
 	publisher.connect();
-	init();
+	init_state();
 }
 
 #endif
