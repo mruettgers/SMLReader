@@ -23,50 +23,50 @@ public:
     config = _config;
     uint8_t lastCharOfTopic = strlen(config.topic) - 1;
     baseTopic = String(config.topic) + (lastCharOfTopic >= 0 && config.topic[lastCharOfTopic] == '/' ? "" : "/");
+
+    client.begin(config.server, atoi(config.port), net);
   }
+
   void connect()
   {
     DEBUG("Establishing MQTT client connection.");
-    client.connect("SMLReader");
-    if (client.connected()) {
+    client.connect("SMLReader", config.username, config.password);
+    if (client.connected())
+    {
       char message[32];
-      snprintf(message,32,"Hello from %08X.",ESP.getChipId());
+      snprintf(message, 32, "Hello from %08X.", ESP.getChipId());
       info(message);
     }
   }
 
   void loop()
   {
-    if (client)
-    {
-      client.loop();
-    }
+    client.loop();
   }
 
-  void publish(metric_value *values)
+  void debug(const char *message)
   {
+    publish(baseTopic + "debug", message);
+  }
 
-    if (!client.connected())
-    {
-      connect();
-    }
+  void info(const char *message)
+  {
+    publish(baseTopic + "info", message);
+  }
 
-    if (!client.connected())
-    {
-      // Something failed
-      DEBUG("Connection to MQTT broker could not be established. Omitted publishing of metrics.");
-      return;
-    }
-
+  void publish(const metric_value *values)
+  {
     // Publish
     int32_t value;
     for (uint8_t i = 0; i < NUM_OF_METRICS; i++)
     {
 
-      //TODO:
-      //sent to /topic/metric/[name]/value
-      //sent to /topic/metric/[name]/json // with meta info
+      String metricTopic = baseTopic + "metric/" + METRICS[i].name + "/";
+
       value = (uint32_t)((values[i].value * (pow(10, values[i].scaler))) * 1000);
+
+      publish(metricTopic + "value", String(value));
+
       DEBUG("Published metric '%s':", METRICS[i].name);
       DEBUG("  Value: %ld", (long)values[i].value);
       DEBUG("  Unit: %d", (int)values[i].unit);
@@ -76,20 +76,39 @@ public:
 
 private:
   MqttConfig config;
+  WiFiClient net;
   MQTTClient client;
   bool connected = false;
   String baseTopic;
 
-  void info(char *message)
+  void publish(const String &topic, const String &payload)
   {
-    String infoTopic = baseTopic + "info";
-    DEBUG(infoTopic.c_str());
-
-    for (uint8_t i = 0; i < NUM_OF_METRICS; i++)
+    publish(topic.c_str(), payload.c_str());
+  }
+  void publish(String &topic, const char *payload)
+  {
+    publish(topic.c_str(), payload);
+  }
+  void publish(const char *topic, const String &payload)
+  {
+    publish(topic, payload.c_str());
+  }
+  void publish(const char *topic, const char *payload)
+  {
+    if (!client.connected())
     {
-      String metricTopic = baseTopic + "metric/" + METRICS[i].name + "/";
-      DEBUG(metricTopic.c_str());
+      connect();
     }
+    if (!client.connected())
+    {
+      // Something failed
+      DEBUG("Connection to MQTT broker failed.");
+      DEBUG("Unable to publish a message to '%s'.", topic);
+      return;
+    }
+    DEBUG("Publishing message to '%s':", topic);
+    DEBUG(payload);
+    client.publish(topic, payload);
   }
 };
 

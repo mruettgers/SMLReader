@@ -11,6 +11,7 @@
 #include <IotWebConf.h>
 #include "publishers/mqtt_publisher.h"
 #include "EEPROM.h"
+#include <ESP8266WiFi.h>
 #endif
 
 // SML constants
@@ -42,11 +43,6 @@ WiFiClient net;
 MqttConfig mqttConfig;
 MqttPublisher publisher;
 
-/**   const char* label, const char* id, char* valueBuffer, int length,
-    const char* type = "text", const char* placeholder = NULL,
-    const char* defaultValue = NULL, const char* customHtml = NULL,
-    boolean visible = true);
-	**/
 IotWebConf iotWebConf("SMLReader", &dnsServer, &server, "", VERSION);
 IotWebConfParameter params[] = {
 	IotWebConfParameter("MQTT server", "mqttServer", mqttConfig.server, sizeof(mqttConfig.server), "text", NULL, mqttConfig.server, NULL, true),

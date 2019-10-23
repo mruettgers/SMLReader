@@ -35,7 +35,7 @@ public:
   {
     owHub->poll();
   }
-  void publish(metric_value *values)
+  void publish(const metric_value *values)
   {
     // Publish
     int32_t value;
