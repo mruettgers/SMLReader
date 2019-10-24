@@ -19,7 +19,7 @@ In 1-Wire mode the SMLReader basically works by emulating one or more 1-Wire sla
 Metrics that have been read from the optical unit of the meter are provided via the available 32 bit registers of the BAE0910 (`userm`, `usern`, `usero`, `userp`).
 The number of 1-Wire slaves that are being added to the virtual hub depends on the number of metrics.
 
-The emulation of the 1-Wire slave device is realized by the use of [OneWireHub](https://github.com/orgua/OneWireHub).
+The emulation of the 1-Wire slave device(s) is realized by the use of [OneWireHub](https://github.com/orgua/OneWireHub).
 
 
 
@@ -28,10 +28,15 @@ The emulation of the 1-Wire slave device is realized by the use of [OneWireHub](
 The code parts that are responsible for publishing metrics via 1-Wire are not actively maintained.  
 It is likely that support for 1-Wire will be dropped in the future as it is less reliable and data cannot be transmitted as fast as with MQTT.
 
-![IR reading head](doc/01_reading_head.png)
-![WiFi and MQTT Setup](doc/02_setup.png)
-![MQTT](doc/03_mqtt.png)
-![Grafana](doc/04_grafana.png)
+### Hardware
+![IR reading head](doc/reading_head.png)
+![Scheamtic diagram](doc/schema.png)
+
+
+### Softare
+![WiFi and MQTT Setup](doc/screenshot_setup.png)
+![MQTT](doc/screenshot_mqtt.png)
+![Grafana](doc/screenshot_grafana.png)
 
 ---
 
