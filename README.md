@@ -33,7 +33,7 @@ It is likely that support for 1-Wire will be dropped in the future as it is less
 ![Scheamtic diagram](doc/schema.png)
 
 
-### Softare
+### Software
 ![WiFi and MQTT Setup](doc/screenshot_setup.png)
 ![MQTT](doc/screenshot_mqtt.png)
 ![Grafana](doc/screenshot_grafana.png)
