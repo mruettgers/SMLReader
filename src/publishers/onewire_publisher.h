@@ -18,7 +18,7 @@ class OneWirePublisher
 public:
   void setup(int pin)
   {
-    DEBUG("Setting up 1wire publisher.")
+    DEBUG("Setting up 1wire publisher.");
     owHub = new OneWireHub(pin);
     // Because we have only 4 32 bit registers we will add multiple slave devices to the hub if required
     BAE910 *owDevice;

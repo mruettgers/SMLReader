@@ -3,7 +3,7 @@
 
 #include <types.h>
 
-const char* VERSION = "1.0.0";
+const char* VERSION = "1.0.1";
 
 // Modifying the config version will probably cause a loss of the existig configuration.
 // Be careful!

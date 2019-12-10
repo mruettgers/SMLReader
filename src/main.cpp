@@ -26,8 +26,8 @@ void read_message();
 void read_checksum();
 void process_message();
 
-// Serial device
-SoftwareSerial sensor(SENSOR_PIN, -1, false, BUFFER_SIZE, BUFFER_SIZE);
+// Serial sensor device
+SoftwareSerial sensor;
 
 #ifdef MODE_ONEWIRE
 OneWirePublisher publisher;
@@ -273,7 +273,7 @@ void setup()
 	SERIAL_DEBUG_SETUP(115200);
 
 	// Setup reading head
-	sensor.begin(9600);
+	sensor.begin(9600, SWSERIAL_8N1, SENSOR_PIN, -1, false, BUFFER_SIZE, BUFFER_SIZE);
 	sensor.enableTx(false);
 	sensor.enableRx(true);
 	sensor.enableIntTx(false);
@@ -286,11 +286,11 @@ void setup()
 #else
 	// Setup WiFi and config stuff
 	DEBUG("Setting up WiFi and config stuff.");
-	delay(2000);
+	DEBUG("Setting status pin to %d.", STATUS_PIN);
 	iotWebConf.setStatusPin(STATUS_PIN);
 	for (uint8_t i = 0; i < sizeof(params) / sizeof(params[0]); i++)
 	{
-		DEBUG("Added parameter %s.", params[i].label);
+		DEBUG("Adding parameter %s.", params[i].label);
 		iotWebConf.addParameter(&params[i]);
 	}
 	iotWebConf.setConfigSavedCallback(&configSaved);

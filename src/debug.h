@@ -3,6 +3,12 @@
 
 #include "FormattingSerialDebug.h"
 
+#ifdef DEBUG
+#define SERIAL_DEBUG true
+#else
+#define SERIAL_DEBUG false
+#endif
+
 void DEBUG_DUMP_BUFFER(byte *buf, int size)
 {
 #if (defined(SERIAL_DEBUG_VERBOSE) && SERIAL_DEBUG_VERBOSE)

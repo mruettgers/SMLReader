@@ -33,8 +33,8 @@ public:
     client.connect("SMLReader", config.username, config.password);
     if (client.connected())
     {
-      char message[32];
-      snprintf(message, 32, "Hello from %08X.", ESP.getChipId());
+      char message[64];
+      snprintf(message, 64, "Hello from %08X, running SMLReader version %s.", ESP.getChipId(), VERSION);
       info(message);
     }
   }
