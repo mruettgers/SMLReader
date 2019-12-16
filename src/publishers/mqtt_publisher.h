@@ -57,18 +57,21 @@ public:
   void publish(const metric_value *values)
   {
     // Publish
-    int32_t value;
+    int64_t value;
+    char buf[21];
+
     for (uint8_t i = 0; i < NUM_OF_METRICS; i++)
     {
 
       String metricTopic = baseTopic + "metric/" + METRICS[i].name + "/";
 
-      value = (uint32_t)((values[i].value * (pow(10, values[i].scaler))) * 1000);
+      value = ((values[i].value * (pow(10, values[i].scaler))) * 1000);
 
-      publish(metricTopic + "value", String(value));
-
+      sprintf(buf,"%lld", value);
+      publish(metricTopic + "value", buf);
+      
       DEBUG("Published metric '%s':", METRICS[i].name);
-      DEBUG("  Value: %ld", (long)values[i].value);
+      DEBUG("  Value: %lld", values[i].value);
       DEBUG("  Unit: %d", (int)values[i].unit);
       DEBUG("  Scaler: %d", (int)values[i].scaler);
     }
