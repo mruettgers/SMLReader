@@ -49,7 +49,7 @@ The phototransistor has been fixed with hot glue within the housing.
 
 ### Configuration
 
-The configuration of the meter is done by simply editings `src/config.h` and adjusting the `metrics` variable before building and uploading SMLReader.
+The configuration of the meter is done by simply editing `src/config.h` and adjusting the `metrics` variable before building and uploading SMLReader.
 
 ```c++
 // EHM ED300L
