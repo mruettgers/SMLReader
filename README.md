@@ -49,7 +49,7 @@ The phototransistor has been fixed with hot glue within the housing.
 
 ### Configuration
 
-The configuration of the meter is done by simply editing `src/config.h` and adjusting the `metrics` variable before building and uploading SMLReader.
+The configuration of the meter is done by editing `src/config.h` and adjusting the `metrics` variable before building and flashing SMLReader.
 
 ```c++
 // EHM ED300L
@@ -58,9 +58,12 @@ static const metric METRICS[] = {
     {"power_out", {0x77, 0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xFF}},
     {"power_current", {0x77, 0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xFF}}};
 ```
+The neccessary binary sequences start with `0x77 0x07` followed by the corresponding OBIS identifier. This identifier is probably  described in the meter's manual. If not, you can flash a debug build with verbose debugging enabled to see what identifiers are provided by your meter.
+Verbose debugging can be enabled by setting `SERIAL_DEBUG_VERBOSE=true` in the `platformio.ini` file.
 
-WiFi and MQTT are configured via the web interface provided by [IotWebConf](https://github.com/prampec/IotWebConf) which can be reached after joining the WiFi network named SMLReader and heading to http://192.168.4.1.   
-If the device has already been configured the web interface can be reached via your local network by using the IP it received from the DHCP server.
+
+WiFi and MQTT are configured via the web interface provided by [IotWebConf](https://github.com/prampec/IotWebConf) and which can be reached after joining the WiFi network named SMLReader and heading to http://192.168.4.1.   
+If the device has already been configured,  the web interface can be reached via the IP address obtained from your local network's DHCP server.
 
 
 ---
