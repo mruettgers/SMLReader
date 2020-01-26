@@ -10,7 +10,6 @@ const char* VERSION = "1.0.1";
 const char* CONFIG_VERSION = "1.0.2";
 
 const uint8_t SENSOR_PIN = 4;
-const uint8_t ONEWIRE_PIN = 0;
 const uint8_t STATUS_PIN = LED_BUILTIN;
 
 // EHM ED300L

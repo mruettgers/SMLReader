@@ -5,14 +5,10 @@
 #include <SoftwareSerial.h>
 #include <FastCRC.h>
 
-#ifdef MODE_ONEWIRE
-#include "publishers/onewire_publisher.h"
-#else
 #include <IotWebConf.h>
 #include "publishers/mqtt_publisher.h"
 #include "EEPROM.h"
 #include <ESP8266WiFi.h>
-#endif
 
 // SML constants
 const byte START_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01};
@@ -29,9 +25,6 @@ void process_message();
 // Serial sensor device
 SoftwareSerial sensor;
 
-#ifdef MODE_ONEWIRE
-OneWirePublisher publisher;
-#else
 void wifiConnected();
 void configSaved();
 
@@ -53,8 +46,6 @@ IotWebConfParameter params[] = {
 
 boolean needReset = false;
 boolean connected = false;
-
-#endif
 
 // Helpers
 FastCRC16 CRC16;
@@ -279,11 +270,6 @@ void setup()
 	sensor.enableIntTx(false);
 
 	// Initialize publisher
-#ifdef MODE_ONEWIRE
-	// Setup 1wire publisher
-	publisher.setup(ONEWIRE_PIN);
-	init_state();
-#else
 	// Setup WiFi and config stuff
 	DEBUG("Setting up WiFi and config stuff.");
 	DEBUG("Setting status pin to %d.", STATUS_PIN);
@@ -318,7 +304,6 @@ void setup()
 	server.on("/", [] { iotWebConf.handleConfig(); });
 	server.onNotFound([]() { iotWebConf.handleNotFound(); });
 
-#endif
 	DEBUG("Setup done.");
 }
 
@@ -328,11 +313,6 @@ void loop()
 	publisher.loop();
 	yield();
 
-#ifdef MODE_ONEWIRE
-	// SMLReader state machine
-	run_current_state();
-	yield();
-#else
 	if (needReset)
 	{
 		// Doing a chip reset caused by config changes
@@ -348,10 +328,8 @@ void loop()
 	}
 	iotWebConf.doLoop();
 	yield();
-#endif
 }
 
-#ifndef MODE_ONEWIRE
 void configSaved()
 {
 	DEBUG("Configuration was updated.");
@@ -365,5 +343,3 @@ void wifiConnected()
 	publisher.connect();
 	init_state();
 }
-
-#endif
