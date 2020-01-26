@@ -5,7 +5,6 @@ A smart meter (SML) to MQTT gateway
 ## Documentation
 
 This documentation is a work in progress.
-The previous version can be found [here](doc/old/README.md).
 
 ## About
 
