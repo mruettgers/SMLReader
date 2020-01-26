@@ -72,8 +72,9 @@ If the device has already been configured,  the web interface can be reached via
 ### Links
 
 * https://www.msxfaq.de/sonst/bastelbude/smartmeter_d0_sml_protokoll.htm
-* https://www.photovoltaikforum.com/thread/78798-sml-pr%C3%BCfsummenberechnung-ich-verzweifle-an-crc/
-* http://www.stefan-weigert.de/php_loader/sml.php
+* https://www.photovoltaikforum.com/thread/78798-sml-pr%C3%BCfsummenberechnung-ich-verzweifle-an-crc/ (Helped me to finally solve some weird CRC calculation issues)
+* http://www.stefan-weigert.de/php_loader/sml.php (Sources of the 3D-printed housing of the reading head)
+* https://github.com/gemu2015/Sonoff-Tasmota (Gemu's excellent Tasmota version with SML support)
 
 ## Donate
 
