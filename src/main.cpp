@@ -4,6 +4,7 @@
 // Third party dependencies
 #include <SoftwareSerial.h>
 #include <FastCRC.h>
+#include <sml/sml_file.h>
 
 #include <IotWebConf.h>
 #include "publishers/mqtt_publisher.h"
@@ -189,57 +190,17 @@ void process_message()
 		return;
 	}
 
+
 	// Parse
-	void *found_at;
-	metric_value values[NUM_OF_METRICS];
-	byte *cp;
-	byte len, type;
-	uint64_t uvalue;
-	for (uint8_t i = 0; i < NUM_OF_METRICS; i++)
-	{
-		size_t pattern_size = METRICS[i].pattern.size();
-		found_at = memmem_P(buffer, position, &(METRICS[i].pattern.front()), pattern_size);
+	sml_file *file = sml_file_parse(buffer + 8, position - 16);
 
-		if (found_at != NULL)
-		{
-			DEBUG("Found metric '%s.'", METRICS[i].name);
-			cp = (byte *)(found_at) + pattern_size;
+	DEBUG_SML_FILE(file);
 
-			// Ingore status byte
-			cp += (*cp & 0x0f);
+	//publisher.publish(values);
 
-			// Ignore time byte
-			cp += (*cp & 0x0f);
-
-			// Save unit
-			len = *cp & 0x0f;
-			values[i].unit = *(cp + 1);
-			cp += len;
-
-			// Save scaler
-			len = *cp & 0x0f;
-			values[i].scaler = *(cp + 1);
-			cp += len;
-
-			// Save value
-			type = *cp & 0x70;
-			len = *cp & 0x0f;
-			cp++;
-
-			uvalue = 0;
-			uint8_t nlen = len;
-			while (--nlen)
-			{
-				uvalue <<= 8;
-				uvalue |= *cp++;
-			}
-
-			values[i].value = (type == 0x50 ? (int64_t)uvalue : uvalue);
-		}
-	}
-
-	publisher.publish(values);
-
+	// free the malloc'd memory
+	sml_file_free(file);
+		
 	// Start over
 	reset_state();
 }

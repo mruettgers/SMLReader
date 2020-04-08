@@ -4,6 +4,7 @@
 #include "config.h"
 #include "debug.h"
 #include "MQTT.h"
+#include <sml/sml_file.h>
 
 struct MqttConfig
 {
@@ -54,8 +55,9 @@ public:
     publish(baseTopic + "info", message);
   }
 
-  void publish(const metric_value *values)
+  void publish(sml_file *file)
   {
+    /*
     // Publish
     int64_t value;
     char buf[21];
@@ -75,6 +77,7 @@ public:
       DEBUG("  Unit: %d", (int)values[i].unit);
       DEBUG("  Scaler: %d", (int)values[i].scaler);
     }
+    */
   }
 
 private:
