@@ -6,10 +6,9 @@
 #include <string.h>
 #include <list>
 
-struct metric
+struct sensor
 {
-    const char *name;
-    const std::vector<byte> pattern;
+    const uint8_t pin;
 };
 
 struct metric_value

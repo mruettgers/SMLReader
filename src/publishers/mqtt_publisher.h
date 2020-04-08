@@ -55,36 +55,55 @@ public:
     publish(baseTopic + "info", message);
   }
 
-  void publish(sml_file *file)
+  void publish(sml_file *file, uint8_t sensor = 1)
   {
-    /*
-    // Publish
-    int64_t value;
-    char buf[21];
 
-    for (uint8_t i = 0; i < NUM_OF_METRICS; i++)
+    for (int i = 0; i < file->messages_len; i++)
     {
+        sml_message *message = file->messages[i];
+        if (*message->message_body->tag == SML_MESSAGE_GET_LIST_RESPONSE)
+        {
+            sml_list *entry;
+            sml_get_list_response *body;
+            body = (sml_get_list_response *)message->message_body->data;
+            for (entry = body->val_list; entry != NULL; entry = entry->next)
+            {
+                if (!entry->value)
+                {   // do not crash on null value
+                    continue;
+                }
 
-      String metricTopic = baseTopic + "metric/" + METRICS[i].name + "/";
+                char obisIdentifier[32];
+                char buffer[255];
 
-      value = ((values[i].value * (pow(10, values[i].scaler))) * 1000);
+                sprintf(obisIdentifier, "%d-%d:%d.%d.%d*%d",
+                        entry->obj_name->str[0], entry->obj_name->str[1],
+                        entry->obj_name->str[2], entry->obj_name->str[3],
+                        entry->obj_name->str[4], entry->obj_name->str[5]);
 
-      sprintf(buf,"%lld", value);
-      publish(metricTopic + "value", buf);
-      
-      DEBUG("Published metric '%s':", METRICS[i].name);
-      DEBUG("  Value: %lld", values[i].value);
-      DEBUG("  Unit: %d", (int)values[i].unit);
-      DEBUG("  Scaler: %d", (int)values[i].scaler);
+                String entryTopic = baseTopic + "sensor/" + sensor + "/obis/" + obisIdentifier + "/";
+                
+                if (((entry->value->type & SML_TYPE_FIELD) == SML_TYPE_INTEGER) ||
+                         ((entry->value->type & SML_TYPE_FIELD) == SML_TYPE_UNSIGNED))
+                {
+                    double value = sml_value_to_double(entry->value);
+                    int scaler = (entry->scaler) ? *entry->scaler : 0;
+                    int prec = -scaler;
+                    if (prec < 0)
+                        prec = 0;
+                    value = value * pow(10, scaler);
+                    sprintf(buffer, "%.*f", prec, value);
+                    publish(entryTopic + "value", buffer);
+                }
+            }
+        }
     }
-    */
   }
 
 private:
   MqttConfig config;
   WiFiClient net;
   MQTTClient client;
-  bool connected = false;
   String baseTopic;
 
   void publish(const String &topic, const String &payload)
@@ -114,6 +133,7 @@ private:
     }
     DEBUG("Publishing message to '%s':", topic);
     DEBUG(payload);
+    DEBUG("");
     client.publish(topic, payload);
   }
 };
