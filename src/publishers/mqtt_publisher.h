@@ -132,8 +132,7 @@ private:
       return;
     }
     DEBUG("Publishing message to '%s':", topic);
-    DEBUG(payload);
-    DEBUG("");
+    DEBUG("%s\n", payload);
     client.publish(topic, payload);
   }
 };

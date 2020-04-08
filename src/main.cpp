@@ -194,7 +194,7 @@ void process_message()
 	// Parse
 	sml_file *file = sml_file_parse(buffer + 8, position - 16);
 
-	//DEBUG_SML_FILE(file);
+	DEBUG_SML_FILE(file);
 
 	publisher.publish(file);
 
