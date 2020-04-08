@@ -76,10 +76,10 @@ public:
                 char obisIdentifier[32];
                 char buffer[255];
 
-                sprintf(obisIdentifier, "%d-%d:%d.%d.%d*%d",
+                sprintf(obisIdentifier, "%d-%d:%d.%d.%d",
                         entry->obj_name->str[0], entry->obj_name->str[1],
                         entry->obj_name->str[2], entry->obj_name->str[3],
-                        entry->obj_name->str[4], entry->obj_name->str[5]);
+                        entry->obj_name->str[4]);
 
                 String entryTopic = baseTopic + "sensor/" + sensor + "/obis/" + obisIdentifier + "/";
                 
