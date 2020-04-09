@@ -51,7 +51,7 @@ If the device has already been configured,  the web interface can be reached via
 
 ### Running
 
-If everything is configured properly and running with a sensor in place, SMLReader will  publish all numeric metrics received by the meter to the configured MQTT broker:
+If everything is configured properly and running with a sensor in place, SMLReader will  publish all numeric metrics received from the meter to the configured MQTT broker:
 
 ```
 MB-Monty ➜  ~  mosquitto_sub -h 10.4.32.103 -v -t smartmeter/mains/#
