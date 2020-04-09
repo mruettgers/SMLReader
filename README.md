@@ -16,7 +16,6 @@ SMLReader publishes the metrics read from the meter's optical unit to an MQTT br
 
 ### Screenshots
 ![WiFi and MQTT setup](doc/screenshots/screenshot_setup.png)
-![MQTT](doc/screenshots/screenshot_mqtt.png)
 ![Grafana](doc/screenshots/screenshot_grafana.png)
 
 ### Hardware
@@ -41,21 +40,34 @@ The phototransistor has been fixed with hot glue within the housing.
 
 ### Configuration
 
-The configuration of the meter is done by editing `src/config.h` and adjusting the `metrics` variable before building and flashing SMLReader.
+The static configuration is done by editing `src/config.h` and adjusting the proper variables.
 
 ```c++
-// EHM ED300L
-static const metric METRICS[] = {
-    {"power_in", {0x77, 0x07, 0x01, 0x00, 0x01, 0x08, 0x00, 0xFF}},
-    {"power_out", {0x77, 0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xFF}},
-    {"power_current", {0x77, 0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xFF}}};
+const uint8_t SENSOR_PIN = 4;
 ```
-The neccessary binary sequences start with `0x77 0x07` followed by the corresponding OBIS identifier. This identifier is probably  described in the meter's manual. If not, you can flash a debug build with verbose debugging enabled to see what identifiers are provided by your meter.
-Verbose debugging can be enabled by setting `SERIAL_DEBUG_VERBOSE=true` in the `platformio.ini` file.
-
 
 WiFi and MQTT are configured via the web interface provided by [IotWebConf](https://github.com/prampec/IotWebConf) and which can be reached after joining the WiFi network named SMLReader and heading to http://192.168.4.1.   
 If the device has already been configured,  the web interface can be reached via the IP address obtained from your local network's DHCP server.
+
+### Running
+
+If everything is configured properly and running with a sensor in place, SMLReader will  publish all numeric metrics received by the meter to the configured MQTT broker:
+
+```
+MB-Monty ➜  ~  mosquitto_sub -h 10.4.32.103 -v -t smartmeter/mains/#
+smartmeter/mains/info Hello from 00C7551E, running SMLReader version 1.0.1.
+smartmeter/mains/sensor/1/obis/1-0:1.8.0/value 3469015.0
+smartmeter/mains/sensor/1/obis/1-0:2.8.0/value 13.2
+smartmeter/mains/sensor/1/obis/1-0:1.8.1/value 0.0
+smartmeter/mains/sensor/1/obis/1-0:2.8.1/value 13.2
+smartmeter/mains/sensor/1/obis/1-0:1.8.2/value 3469015.0
+smartmeter/mains/sensor/1/obis/1-0:2.8.2/value 0.0
+smartmeter/mains/sensor/1/obis/1-0:16.7.0/value 302.2
+```
+
+### Debugging
+
+Verbose serial logging can be enabled by setting `SERIAL_DEBUG_VERBOSE=true` in the `platformio.ini` file.
 
 
 ---
@@ -68,6 +80,7 @@ If the device has already been configured,  the web interface can be reached via
 * [IotWebConf](https://github.com/prampec/IotWebConf)
 * [MicroDebug](https://github.com/rlogiacco/MicroDebug)
 * [MQTT](https://github.com/256dpi/arduino-mqtt)
+* [libSML](https://github.com/volkszaehler/libsml)
 
 ### Links
 
