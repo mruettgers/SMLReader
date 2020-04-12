@@ -75,7 +75,6 @@ Verbose serial logging can be enabled by setting `SERIAL_DEBUG_VERBOSE=true` in 
 ## Acknowledgements
 
 ### Third party libraries
-* [FastCRC](https://github.com/FrankBoesing/FastCRC)
 * [ESPSoftwareSerial](https://github.com/plerup/espsoftwareserial)
 * [IotWebConf](https://github.com/prampec/IotWebConf)
 * [MicroDebug](https://github.com/rlogiacco/MicroDebug)
@@ -85,7 +84,7 @@ Verbose serial logging can be enabled by setting `SERIAL_DEBUG_VERBOSE=true` in 
 ### Links
 
 * https://www.msxfaq.de/sonst/bastelbude/smartmeter_d0_sml_protokoll.htm
-* https://www.photovoltaikforum.com/thread/78798-sml-pr%C3%BCfsummenberechnung-ich-verzweifle-an-crc/ (Helped me to finally solve some weird CRC calculation issues)
+* https://www.photovoltaikforum.com/thread/78798-sml-pr%C3%BCfsummenberechnung-ich-verzweifle-an-crc/ (Helped me to finally solve some weird CRC calculation issues before switching over to libSML)
 * http://www.stefan-weigert.de/php_loader/sml.php (Sources of the 3D-printed housing of the reading head)
 * https://github.com/gemu2015/Sonoff-Tasmota (Gemu's excellent Tasmota version with SML support)
 

@@ -2,8 +2,6 @@
 #include "debug.h"
 
 // Third party dependencies
-#include <SoftwareSerial.h>
-#include <FastCRC.h>
 #include <sml/sml_file.h>
 
 #include <IotWebConf.h>
@@ -11,20 +9,8 @@
 #include "EEPROM.h"
 #include <ESP8266WiFi.h>
 
-// SML constants
-const byte START_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01};
-const byte END_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x1A};
-const size_t BUFFER_SIZE = 3840; // Max datagram duration 400ms at 9600 Baud
-const uint8_t READ_TIMEOUT = 30;
-
-// States
-void wait_for_start_sequence();
-void read_message();
-void read_checksum();
-void process_message();
-
-// Serial sensor device
-SoftwareSerial sensor;
+sensor_state sensors[NUM_OF_SENSORS];
+sensor_state *sensor;
 
 void wifiConnected();
 void configSaved();
@@ -48,33 +34,25 @@ IotWebConfParameter params[] = {
 boolean needReset = false;
 boolean connected = false;
 
-// Helpers
-FastCRC16 CRC16;
-byte buffer[BUFFER_SIZE];
-size_t position = 0;
-unsigned long last_state_reset = 0;
-uint8_t bytes_until_checksum = 0;
-uint8_t loop_counter = 0;
-void (*state)() = NULL;
-
 // Wrappers for sensor access
 int data_available()
 {
-	return sensor.available();
+	return sensor->serial.available();
 }
 int data_read()
 {
-	return sensor.read();
+	return sensor->serial.read();
 }
 
 // Set state
 void set_state(void (*new_state)())
 {
+	DEBUG("Sensor: %s", sensor->config->name);
 	if (new_state == wait_for_start_sequence)
 	{
 		DEBUG("State is 'wait_for_start_sequence'.");
-		last_state_reset = millis();
-		position = 0;
+		sensor->last_state_reset = millis();
+		sensor->position = 0;
 	}
 	else if (new_state == read_message)
 	{
@@ -83,13 +61,13 @@ void set_state(void (*new_state)())
 	else if (new_state == read_checksum)
 	{
 		DEBUG("State is 'read_checksum'.");
-		bytes_until_checksum = 3;
+		sensor->bytes_until_checksum = 3;
 	}
 	else if (new_state == process_message)
 	{
 		DEBUG("State is 'process_message'.");
 	};
-	state = new_state;
+	sensor->state = new_state;
 }
 
 // Initialize state machine
@@ -113,11 +91,11 @@ void wait_for_start_sequence()
 {
 	while (data_available())
 	{
-		buffer[position] = data_read();
+		sensor->buffer[sensor->position] = data_read();
 		yield();
 
-		position = (buffer[position] == START_SEQUENCE[position]) ? (position + 1) : 0;
-		if (position == sizeof(START_SEQUENCE))
+		sensor->position = (sensor->buffer[sensor->position] == START_SEQUENCE[sensor->position]) ? (sensor->position + 1) : 0;
+		if (sensor->position == sizeof(START_SEQUENCE))
 		{
 			// Start sequence has been found
 			DEBUG("Start sequence found.");
@@ -133,19 +111,19 @@ void read_message()
 	while (data_available())
 	{
 		// Check whether the buffer is still big enough to hold the number of fill bytes (1 byte) and the checksum (2 bytes)
-		if ((position + 3) == BUFFER_SIZE)
+		if ((sensor->position + 3) == BUFFER_SIZE)
 		{
 			reset_state("Buffer will overflow, starting over.");
 			return;
 		}
-		buffer[position++] = data_read();
+		sensor->buffer[sensor->position++] = data_read();
 		yield();
 
 		// Check for end sequence
 		int last_index_of_end_seq = sizeof(END_SEQUENCE) - 1;
 		for (int i = 0; i <= last_index_of_end_seq; i++)
 		{
-			if (END_SEQUENCE[last_index_of_end_seq - i] != buffer[position - (i + 1)])
+			if (END_SEQUENCE[last_index_of_end_seq - i] != sensor->buffer[sensor->position - (i + 1)])
 			{
 				break;
 			}
@@ -162,41 +140,29 @@ void read_message()
 // Read the number of fillbytes and the checksum
 void read_checksum()
 {
-	while (bytes_until_checksum > 0 && data_available())
+	while (sensor->bytes_until_checksum > 0 && data_available())
 	{
-		buffer[position++] = data_read();
-		bytes_until_checksum--;
+		sensor->buffer[sensor->position++] = data_read();
+		sensor->bytes_until_checksum--;
 		yield();
 	}
 
-	if (bytes_until_checksum == 0)
+	if (sensor->bytes_until_checksum == 0)
 	{
 		DEBUG("Message has been read.");
-		DEBUG_DUMP_BUFFER(buffer, position);
+		DEBUG_DUMP_BUFFER(sensor->buffer, sensor->position);
 		set_state(process_message);
 	}
 }
 
 void process_message()
 {
-	// Verify by checksum
-	uint16_t calculated_checksum = CRC16.x25(buffer, (position - 2));
-	// Swap the bytes
-	uint16_t given_checksum = (buffer[position - 1] << 8) | buffer[position - 2];
-
-	if (calculated_checksum != given_checksum)
-	{
-		reset_state("Checksum mismatch, starting over.");
-		return;
-	}
-
-
 	// Parse
-	sml_file *file = sml_file_parse(buffer + 8, position - 16);
+	sml_file *file = sml_file_parse(sensor->buffer + 8, sensor->position - 16);
 
 	DEBUG_SML_FILE(file);
 
-	publisher.publish(file);
+	publisher.publish(sensor, file);
 
 	// free the malloc'd memory
 	sml_file_free(file);
@@ -207,15 +173,15 @@ void process_message()
 
 void run_current_state()
 {
-	if (state != NULL)
+	if (sensor->state != NULL)
 	{
 
-		if ((millis() - last_state_reset) > (READ_TIMEOUT * 1000))
+		if ((millis() - sensor->last_state_reset) > (READ_TIMEOUT * 1000))
 		{
 			DEBUG("Did not receive an SML message within %d seconds, starting over.", READ_TIMEOUT);
 			reset_state();
 		}
-		state();
+		sensor->state();
 	}
 }
 
@@ -224,12 +190,19 @@ void setup()
 	// Setup debugging stuff
 	SERIAL_DEBUG_SETUP(115200);
 
-	// Setup reading head
-	sensor.begin(9600, SWSERIAL_8N1, SENSOR_PIN, -1, false, BUFFER_SIZE, BUFFER_SIZE);
-	sensor.enableTx(false);
-	sensor.enableRx(true);
-	sensor.enableIntTx(false);
+	// Setup reading heads
+	DEBUG("%d sensors configured.", NUM_OF_SENSORS);
+	for (uint8_t i = 0; i < NUM_OF_SENSORS; i++) {
+		DEBUG("Initializing sensor %s...", SENSOR_CONFIGS[i].name);
+		sensors[i].config = &(SENSOR_CONFIGS[i]);
+		
+		sensors[i].serial.begin(9600, SWSERIAL_8N1, sensors[i].config->pin, -1, false, BUFFER_SIZE, BUFFER_SIZE);
+		sensors[i].serial.enableTx(false);
+		sensors[i].serial.enableRx(true);
+		sensors[i].serial.enableIntTx(false);
 
+	}
+	
 	// Initialize publisher
 	// Setup WiFi and config stuff
 	DEBUG("Setting up WiFi and config stuff.");
@@ -284,8 +257,11 @@ void loop()
 	if (connected)
 	{
 		// SMLReader state machine
-		run_current_state();
-		yield();
+		for (uint8_t i = 0; i < NUM_OF_SENSORS; i++) {
+			sensor = &sensors[i];
+			run_current_state();
+			yield();
+		}
 	}
 	iotWebConf.doLoop();
 	yield();
@@ -302,5 +278,11 @@ void wifiConnected()
 	DEBUG("WiFi connection established.");
 	connected = true;
 	publisher.connect();
-	init_state();
+
+	// Initialize state machines
+	for (uint8_t i = 0; i < NUM_OF_SENSORS; i++) {
+		DEBUG("Initializing state of sensor %s...", SENSOR_CONFIGS[i].name);
+		sensor = &sensors[i];
+		init_state();
+	}
 }

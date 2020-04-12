@@ -55,7 +55,7 @@ public:
     publish(baseTopic + "info", message);
   }
 
-  void publish(sml_file *file, uint8_t sensor = 1)
+  void publish(sensor_state *sensor, sml_file *file)
   {
 
     for (int i = 0; i < file->messages_len; i++)
@@ -81,7 +81,7 @@ public:
                         entry->obj_name->str[2], entry->obj_name->str[3],
                         entry->obj_name->str[4]);
 
-                String entryTopic = baseTopic + "sensor/" + sensor + "/obis/" + obisIdentifier + "/";
+                String entryTopic = baseTopic + "sensor/" + (sensor->config->name) + "/obis/" + obisIdentifier + "/";
                 
                 if (((entry->value->type & SML_TYPE_FIELD) == SML_TYPE_INTEGER) ||
                          ((entry->value->type & SML_TYPE_FIELD) == SML_TYPE_UNSIGNED))
@@ -94,6 +94,19 @@ public:
                     value = value * pow(10, scaler);
                     sprintf(buffer, "%.*f", prec, value);
                     publish(entryTopic + "value", buffer);
+                }
+                else if (!sensor->config->numeric_only) {
+                  if (entry->value->type == SML_TYPE_OCTET_STRING)
+                  {
+                      char *value;
+                      sml_value_to_strhex(entry->value, &value, true);
+                      publish(entryTopic + "value", value);
+                      free(value);
+                  }
+                  else if (entry->value->type == SML_TYPE_BOOLEAN)
+                  {
+                      publish(entryTopic + "value",  entry->value->data.boolean ? "true" : "false");
+                  }
                 }
             }
         }
