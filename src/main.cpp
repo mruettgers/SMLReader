@@ -1,16 +1,14 @@
+#include <list>
 #include "config.h"
 #include "debug.h"
-
-// Third party dependencies
 #include <sml/sml_file.h>
-
+#include "Sensor.h"
 #include <IotWebConf.h>
-#include "publishers/mqtt_publisher.h"
+#include "MqttPublisher.h"
 #include "EEPROM.h"
 #include <ESP8266WiFi.h>
 
-sensor_state sensors[NUM_OF_SENSORS];
-sensor_state *sensor;
+std::list<Sensor*> *sensors = new std::list<Sensor*>();
 
 void wifiConnected();
 void configSaved();
@@ -34,131 +32,11 @@ IotWebConfParameter params[] = {
 boolean needReset = false;
 boolean connected = false;
 
-// Wrappers for sensor access
-int data_available()
-{
-	return sensor->serial.available();
-}
-int data_read()
-{
-	return sensor->serial.read();
-}
 
-// Set state
-void set_state(void (*new_state)())
-{
-	DEBUG("Sensor: %s", sensor->config->name);
-	if (new_state == wait_for_start_sequence)
-	{
-		DEBUG("State is 'wait_for_start_sequence'.");
-		sensor->last_state_reset = millis();
-		sensor->position = 0;
-	}
-	else if (new_state == read_message)
-	{
-		DEBUG("State is 'read_message'.");
-	}
-	else if (new_state == read_checksum)
-	{
-		DEBUG("State is 'read_checksum'.");
-		sensor->bytes_until_checksum = 3;
-	}
-	else if (new_state == process_message)
-	{
-		DEBUG("State is 'process_message'.");
-	};
-	sensor->state = new_state;
-}
-
-// Initialize state machine
-void init_state()
-{
-	set_state(wait_for_start_sequence);
-}
-
-// Start over and wait for the start sequence
-void reset_state(const char *message = NULL)
-{
-	if (message != NULL && strlen(message) > 0)
-	{
-		DEBUG(message);
-	}
-	init_state();
-}
-
-// Wait for the start_sequence to appear
-void wait_for_start_sequence()
-{
-	while (data_available())
-	{
-		sensor->buffer[sensor->position] = data_read();
-		yield();
-
-		sensor->position = (sensor->buffer[sensor->position] == START_SEQUENCE[sensor->position]) ? (sensor->position + 1) : 0;
-		if (sensor->position == sizeof(START_SEQUENCE))
-		{
-			// Start sequence has been found
-			DEBUG("Start sequence found.");
-			set_state(read_message);
-			return;
-		}
-	}
-}
-
-// Read the rest of the message
-void read_message()
-{
-	while (data_available())
-	{
-		// Check whether the buffer is still big enough to hold the number of fill bytes (1 byte) and the checksum (2 bytes)
-		if ((sensor->position + 3) == BUFFER_SIZE)
-		{
-			reset_state("Buffer will overflow, starting over.");
-			return;
-		}
-		sensor->buffer[sensor->position++] = data_read();
-		yield();
-
-		// Check for end sequence
-		int last_index_of_end_seq = sizeof(END_SEQUENCE) - 1;
-		for (int i = 0; i <= last_index_of_end_seq; i++)
-		{
-			if (END_SEQUENCE[last_index_of_end_seq - i] != sensor->buffer[sensor->position - (i + 1)])
-			{
-				break;
-			}
-			if (i == last_index_of_end_seq)
-			{
-				DEBUG("End sequence found.");
-				set_state(read_checksum);
-				return;
-			}
-		}
-	}
-}
-
-// Read the number of fillbytes and the checksum
-void read_checksum()
-{
-	while (sensor->bytes_until_checksum > 0 && data_available())
-	{
-		sensor->buffer[sensor->position++] = data_read();
-		sensor->bytes_until_checksum--;
-		yield();
-	}
-
-	if (sensor->bytes_until_checksum == 0)
-	{
-		DEBUG("Message has been read.");
-		DEBUG_DUMP_BUFFER(sensor->buffer, sensor->position);
-		set_state(process_message);
-	}
-}
-
-void process_message()
+void process_message(byte *buffer, size_t len, Sensor *sensor)
 {
 	// Parse
-	sml_file *file = sml_file_parse(sensor->buffer + 8, sensor->position - 16);
+	sml_file *file = sml_file_parse(buffer + 8, len - 16);
 
 	DEBUG_SML_FILE(file);
 
@@ -166,23 +44,6 @@ void process_message()
 
 	// free the malloc'd memory
 	sml_file_free(file);
-		
-	// Start over
-	reset_state();
-}
-
-void run_current_state()
-{
-	if (sensor->state != NULL)
-	{
-
-		if ((millis() - sensor->last_state_reset) > (READ_TIMEOUT * 1000))
-		{
-			DEBUG("Did not receive an SML message within %d seconds, starting over.", READ_TIMEOUT);
-			reset_state();
-		}
-		sensor->state();
-	}
 }
 
 void setup()
@@ -190,19 +51,21 @@ void setup()
 	// Setup debugging stuff
 	SERIAL_DEBUG_SETUP(115200);
 
-	// Setup reading heads
-	DEBUG("%d sensors configured.", NUM_OF_SENSORS);
-	for (uint8_t i = 0; i < NUM_OF_SENSORS; i++) {
-		DEBUG("Initializing sensor %s...", SENSOR_CONFIGS[i].name);
-		sensors[i].config = &(SENSOR_CONFIGS[i]);
-		
-		sensors[i].serial.begin(9600, SWSERIAL_8N1, sensors[i].config->pin, -1, false, BUFFER_SIZE, BUFFER_SIZE);
-		sensors[i].serial.enableTx(false);
-		sensors[i].serial.enableRx(true);
-		sensors[i].serial.enableIntTx(false);
+#ifdef DEBUG
+	// Delay for getting a serial console attached in time
+	delay(2000);
+#endif
 
+	// Setup reading heads
+	DEBUG("Setting up %d configured sensors...", NUM_OF_SENSORS);
+	const SensorConfig *config  = SENSOR_CONFIGS;
+	for (uint8_t i = 0; i < NUM_OF_SENSORS; i++, config++)
+	{
+		Sensor *sensor = new Sensor(config, process_message);
+		sensors->push_back(sensor);
 	}
-	
+	DEBUG("Sensor setup done.");
+
 	// Initialize publisher
 	// Setup WiFi and config stuff
 	DEBUG("Setting up WiFi and config stuff.");
@@ -256,12 +119,10 @@ void loop()
 	}
 	if (connected)
 	{
-		// SMLReader state machine
-		for (uint8_t i = 0; i < NUM_OF_SENSORS; i++) {
-			sensor = &sensors[i];
-			run_current_state();
-			yield();
-		}
+		// Execute sensor state machines
+		for (std::list<Sensor*>::iterator it = sensors->begin(); it != sensors->end(); ++it){
+			(*it)->loop();
+		}		
 	}
 	iotWebConf.doLoop();
 	yield();
@@ -279,10 +140,8 @@ void wifiConnected()
 	connected = true;
 	publisher.connect();
 
-	// Initialize state machines
-	for (uint8_t i = 0; i < NUM_OF_SENSORS; i++) {
-		DEBUG("Initializing state of sensor %s...", SENSOR_CONFIGS[i].name);
-		sensor = &sensors[i];
-		init_state();
+	// Initialize sensors
+	for (std::list<Sensor*>::iterator it = sensors->begin(); it != sensors->end(); ++it){
+		(*it)->init();
 	}
 }

@@ -1,7 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include <types.h>
+#include "Arduino.h"
+#include "Sensor.h"
 
 const char *VERSION = "2.0.0";
 
@@ -10,11 +11,11 @@ const char *VERSION = "2.0.0";
 const char *CONFIG_VERSION = "1.0.2";
 const uint8_t STATUS_PIN = LED_BUILTIN;
 
-static const sensor_config SENSOR_CONFIGS[] = {
+static const SensorConfig SENSOR_CONFIGS[] = {
     {.pin = D5,
      .name = "1",
      .numeric_only = false}};
 
-const uint8_t NUM_OF_SENSORS = sizeof(SENSOR_CONFIGS) / sizeof(sensor_config);
+const uint8_t NUM_OF_SENSORS = sizeof(SENSOR_CONFIGS) / sizeof(SensorConfig);
 
 #endif

@@ -1,9 +1,10 @@
-#ifndef mqtt_publisher_h
-#define mqtt_publisher_h
+#ifndef MQTT_PUBLISHER_H
+#define MQTT_PUBLISHER_H
 
 #include "config.h"
 #include "debug.h"
 #include "MQTT.h"
+#include <string.h>
 #include <sml/sml_file.h>
 
 struct MqttConfig
@@ -55,7 +56,7 @@ public:
     publish(baseTopic + "info", message);
   }
 
-  void publish(sensor_state *sensor, sml_file *file)
+  void publish(Sensor *sensor, sml_file *file)
   {
 
     for (int i = 0; i < file->messages_len; i++)
