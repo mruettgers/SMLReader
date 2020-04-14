@@ -117,7 +117,7 @@ public:
 private:
   MqttConfig config;
   WiFiClient net;
-  MQTTClient client;
+  MQTTClient client = MQTTClient(512);
   String baseTopic;
 
   void publish(const String &topic, const String &payload)
