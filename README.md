@@ -40,19 +40,23 @@ The phototransistor has been fixed with hot glue within the housing.
 
 ### Configuration
 
-The static configuration is done by editing `src/config.h` and adjusting the proper variables.
+The configuration of the reading heads is done by editing `src/config.h` and adjusting the SENSOR_CONFIGS variable (see below).
 
 ```c++
 static const SensorConfig SENSOR_CONFIGS[] = {
-    {.pin = D2,
-     .name = "1",
-     .numeric_only = false},
+    {.pin = D2, // GPIO Pin
+     .name = "1", // Sensor name used in MQTT topic
+     .numeric_only = false // If "true", only numeric values are being published via MQTT
+    },
     {.pin = D5,
      .name = "2",
-     .numeric_only = false},
+     .numeric_only = false
+    },
     {.pin = D6,
     .name = "3",
-    .numeric_only = false}};
+    .numeric_only = false
+    }
+};
 ```
 *Attention: Multi-sensor support is experimental and has not been tested due to the lack of multiple meters. For testing purposes I connected one reading head to multiple GPIO pins of my WeMos D1 mini.*
 
