@@ -215,12 +215,13 @@ private:
 
     void process_message()
     {
+        DEBUG("Message is being processed.");
+
         // Call listener
         if (this->callback != NULL)
         {
             this->callback(this->buffer, this->position, this);
         }
-        DEBUG("Processing...");
 
         // Start over
         this->reset_state();
