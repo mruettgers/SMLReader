@@ -31,7 +31,7 @@ A ring magnet (in my case dimensioned 27x21x3mm) ensures that the reading head k
 
 The phototransistor has been fixed with hot glue within the housing.
 
-![Reading Head](doc/assets/SMLReader_Img_ReadingHead_small.jpg "Reading Head") ![Reading Head](doc/assets/SMLReader_Img_ReadingHead_Close_small.jpg "Reading Head")
+![Reading Head](doc/assets/SMLReader_Img_ReadingHead.jpg "Reading Head") ![Reading Head](doc/assets/SMLReader_Img_ReadingHead_Close.jpg "Reading Head") ![D1](doc/assets/SMLReader_Img_D1.jpg "WeMos D1 mini")
 
 #### Schematic diagram
 ![Schematic diagram](doc/assets/SMLReader_Schema.png)
