@@ -122,7 +122,7 @@ void loop()
 		// Execute sensor state machines
 		for (std::list<Sensor*>::iterator it = sensors->begin(); it != sensors->end(); ++it){
 			(*it)->loop();
-		}		
+		}
 	}
 	iotWebConf.doLoop();
 	yield();

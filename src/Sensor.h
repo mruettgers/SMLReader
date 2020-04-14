@@ -38,10 +38,9 @@ public:
         DEBUG("Initializing sensor %s...", this->config->name);
         this->callback = callback;
         this->serial = new SoftwareSerial();
-        this->serial->begin(9600, SWSERIAL_8N1, this->config->pin, -1, false, BUFFER_SIZE, BUFFER_SIZE);
+        this->serial->begin(9600, SWSERIAL_8N1, this->config->pin, -1, false);
         this->serial->enableTx(false);
         this->serial->enableRx(true);
-        this->serial->enableIntTx(false);
         DEBUG("Initialized sensor %s.", this->config->name);
     }
     void init()
