@@ -54,6 +54,7 @@ static const SensorConfig SENSOR_CONFIGS[] = {
     .name = "3",
     .numeric_only = false}};
 ```
+*Attention: Multi-sensor support is experimental and has not been tested due to the lack of multiple meters. For testing purposes I connected one reading head to multiple GPIO pins of my WeMos D1 mini.*
 
 WiFi and MQTT are configured via the web interface provided by [IotWebConf](https://github.com/prampec/IotWebConf) and which can be reached after joining the WiFi network named SMLReader and heading to http://192.168.4.1.   
 If the device has already been configured,  the web interface can be reached via the IP address obtained from your local network's DHCP server.
@@ -72,6 +73,22 @@ smartmeter/mains/sensor/1/obis/1-0:2.8.1/value 13.2
 smartmeter/mains/sensor/1/obis/1-0:1.8.2/value 3469015.0
 smartmeter/mains/sensor/1/obis/1-0:2.8.2/value 0.0
 smartmeter/mains/sensor/1/obis/1-0:16.7.0/value 302.2
+
+smartmeter/mains/sensor/2/obis/1-0:1.8.0/value 3531049.9
+smartmeter/mains/sensor/2/obis/1-0:2.8.0/value 13.2
+smartmeter/mains/sensor/2/obis/1-0:1.8.1/value 0.0
+smartmeter/mains/sensor/2/obis/1-0:2.8.1/value 13.2
+smartmeter/mains/sensor/2/obis/1-0:1.8.2/value 3531050.0
+smartmeter/mains/sensor/2/obis/1-0:2.8.2/value 0.0
+smartmeter/mains/sensor/2/obis/1-0:16.7.0/value 2366.8
+
+smartmeter/mains/sensor/3/obis/1-0:1.8.0/value 3531049.9
+smartmeter/mains/sensor/3/obis/1-0:2.8.0/value 13.2
+smartmeter/mains/sensor/3/obis/1-0:1.8.1/value 0.0
+smartmeter/mains/sensor/3/obis/1-0:2.8.1/value 13.2
+smartmeter/mains/sensor/3/obis/1-0:1.8.2/value 3531050.0
+smartmeter/mains/sensor/3/obis/1-0:2.8.2/value 0.0
+smartmeter/mains/sensor/3/obis/1-0:16.7.0/value 2366.8
 ```
 
 ### Debugging
