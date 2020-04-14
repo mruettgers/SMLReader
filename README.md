@@ -40,7 +40,7 @@ The phototransistor has been fixed with hot glue within the housing.
 
 ### Configuration
 
-The configuration of the reading heads is done by editing `src/config.h` and adjusting the SENSOR_CONFIGS variable (see below).
+The configuration of the reading heads is done by editing `src/config.h` and adjusting  `SENSOR_CONFIGS` (see below).
 
 ```c++
 static const SensorConfig SENSOR_CONFIGS[] = {
