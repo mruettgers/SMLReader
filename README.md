@@ -43,7 +43,16 @@ The phototransistor has been fixed with hot glue within the housing.
 The static configuration is done by editing `src/config.h` and adjusting the proper variables.
 
 ```c++
-const uint8_t SENSOR_PIN = 4;
+static const SensorConfig SENSOR_CONFIGS[] = {
+    {.pin = D2,
+     .name = "1",
+     .numeric_only = false},
+    {.pin = D5,
+     .name = "2",
+     .numeric_only = false},
+    {.pin = D6,
+    .name = "3",
+    .numeric_only = false}};
 ```
 
 WiFi and MQTT are configured via the web interface provided by [IotWebConf](https://github.com/prampec/IotWebConf) and which can be reached after joining the WiFi network named SMLReader and heading to http://192.168.4.1.   
