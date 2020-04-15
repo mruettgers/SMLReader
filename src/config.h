@@ -14,13 +14,7 @@ const uint8_t STATUS_PIN = LED_BUILTIN;
 static const SensorConfig SENSOR_CONFIGS[] = {
     {.pin = D2,
      .name = "1",
-     .numeric_only = false},
-    {.pin = D5,
-     .name = "2",
-     .numeric_only = false},
-    {.pin = D6,
-    .name = "3",
-    .numeric_only = false}};
+     .numeric_only = false}};
 
 const uint8_t NUM_OF_SENSORS = sizeof(SENSOR_CONFIGS) / sizeof(SensorConfig);
 
