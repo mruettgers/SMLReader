@@ -63,6 +63,44 @@ static const SensorConfig SENSOR_CONFIGS[] = {
 WiFi and MQTT are configured via the web interface provided by [IotWebConf](https://github.com/prampec/IotWebConf) and which can be reached after joining the WiFi network named SMLReader and heading to http://192.168.4.1.   
 If the device has already been configured,  the web interface can be reached via the IP address obtained from your local network's DHCP server.
 
+---
+
+### Flashing
+
+There are several ways to flash SMLReader to your ESP8266.  
+I personally prefer the docker way using my dockerized version of esptool.py.
+
+#### IDE
+
+You should be able to use your preferred IDE to build and flash SMLReader if you take care of the dependencies and the build flags configured in the `platform.io` file.
+I strongly recommend using PlatformIO as it takes care of that itself.
+
+#### esptool.py
+
+###### Flashing
+```bash
+docker run -it --device /dev/ttyUSB0 -v $(pwd):/src --rm mruettgers/esptool ash -c "esptool --port /dev/ttyUSB0 write_flash -fm dout 0x00000 /src/smlreader.bin"
+```
+
+Of couse you can flash the image without the use of docker by directily utilizing your local copy of esptool:
+
+```bash
+esptool --port /dev/ttyUSB0 write_flash -fm dout 0x00000 ./smlreader.bin
+```
+
+###### Flashing with serial port monitor
+```bash
+docker run -it --device /dev/ttyUSB0 -v $(pwd):/src --rm mruettgers/esptool ash -c "esptool --port /dev/ttyUSB0 write_flash -fm dout 0x00000 /src/smlreader.bin && miniterm.py /dev/ttyUSB0 115200"
+```
+
+###### Serial port monitor
+```bash
+docker run -it --device /dev/ttyUSB0 -v $(pwd):/src --rm mruettgers/esptool ash -c "miniterm.py /dev/ttyUSB0 115200"
+```
+
+---
+
+
 ### Running
 
 If everything is configured properly and running with a sensor in place, SMLReader will  publish the metrics and values received from the meter to the configured MQTT broker:
@@ -94,6 +132,9 @@ smartmeter/mains/sensor/3/obis/1-0:1.8.2*255/value 3546245.9
 smartmeter/mains/sensor/3/obis/1-0:2.8.2*255/value 0.0
 smartmeter/mains/sensor/3/obis/1-0:16.7.0*255/value 451.2
 ```
+
+---
+
 
 ### Debugging
 
