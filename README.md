@@ -82,10 +82,10 @@ I strongly recommend using PlatformIO as it takes care of that itself.
 docker run -it --device /dev/ttyUSB0 -v $(pwd):/src --rm mruettgers/esptool ash -c "esptool --port /dev/ttyUSB0 write_flash -fm dout 0x00000 /src/smlreader.bin"
 ```
 
-Of couse you can flash the image without the use of docker by directily utilizing your local copy of esptool:
+Of couse you can flash the image without the use of docker by directily utilizing your local copy of esptool.py:
 
 ```bash
-esptool --port /dev/ttyUSB0 write_flash -fm dout 0x00000 ./smlreader.bin
+esptool.py --port /dev/ttyUSB0 write_flash -fm dout 0x00000 ./smlreader.bin
 ```
 
 ###### Flashing with serial port monitor
