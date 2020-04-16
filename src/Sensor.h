@@ -42,12 +42,10 @@ public:
         this->serial->enableTx(false);
         this->serial->enableRx(true);
         DEBUG("Initialized sensor %s.", this->config->name);
-    }
-    void init()
-    {
-        DEBUG("Initializing state of sensor %s...", this->config->name);
+
         this->init_state();
     }
+
     void loop()
     {
         this->run_current_state();

@@ -40,7 +40,9 @@ void process_message(byte *buffer, size_t len, Sensor *sensor)
 
 	DEBUG_SML_FILE(file);
 
-	publisher.publish(sensor, file);
+	if (connected) {
+		publisher.publish(sensor, file);
+	}
 
 	// free the malloc'd memory
 	sml_file_free(file);
@@ -107,8 +109,10 @@ void setup()
 void loop()
 {
 	// Publisher
-	publisher.loop();
-	yield();
+	if (connected) {
+		publisher.loop();
+		yield();
+	}
 
 	if (needReset)
 	{
@@ -117,12 +121,10 @@ void loop()
 		delay(1000);
 		ESP.restart();
 	}
-	if (connected)
-	{
-		// Execute sensor state machines
-		for (std::list<Sensor*>::iterator it = sensors->begin(); it != sensors->end(); ++it){
-			(*it)->loop();
-		}
+
+	// Execute sensor state machines
+	for (std::list<Sensor*>::iterator it = sensors->begin(); it != sensors->end(); ++it){
+		(*it)->loop();
 	}
 	iotWebConf.doLoop();
 	yield();
@@ -139,9 +141,4 @@ void wifiConnected()
 	DEBUG("WiFi connection established.");
 	connected = true;
 	publisher.connect();
-
-	// Initialize sensors
-	for (std::list<Sensor*>::iterator it = sensors->begin(); it != sensors->end(); ++it){
-		(*it)->init();
-	}
 }
