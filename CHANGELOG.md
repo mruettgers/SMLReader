@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.3] - 2020-04-17
+### Changed
+- Added hint to change AP password to the docs
+- Moved WiFi default settings to `config.h`
+### Fixed
+- String initialization issues resulting in random MQTT username/passqord in UI
+
 ## [2.1.2] - 2020-04-16
 ### Changed
 - Updated the docs

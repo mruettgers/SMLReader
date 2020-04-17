@@ -11,8 +11,8 @@ struct MqttConfig
 {
   char server[128] = "mosquitto";
   char port[8] = "1883";
-  char username[128];
-  char password[128];
+  char username[128] = "";
+  char password[128] = "";
   char topic[128] = "iot/smartmeter/";
 };
 

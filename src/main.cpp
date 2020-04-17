@@ -21,7 +21,7 @@ WiFiClient net;
 MqttConfig mqttConfig;
 MqttPublisher publisher;
 
-IotWebConf iotWebConf("SMLReader", &dnsServer, &server, "", CONFIG_VERSION);
+IotWebConf iotWebConf(WIFI_AP_SSID, &dnsServer, &server, WIFI_AP_DEFAULT_PASSWORD, CONFIG_VERSION);
 IotWebConfParameter params[] = {
 	IotWebConfParameter("MQTT server", "mqttServer", mqttConfig.server, sizeof(mqttConfig.server), "text", NULL, mqttConfig.server, NULL, true),
 	IotWebConfParameter("MQTT port", "mqttPort", mqttConfig.port, sizeof(mqttConfig.port), "text", NULL, mqttConfig.port, NULL, true),
@@ -73,6 +73,7 @@ void setup()
 	DEBUG("Setting up WiFi and config stuff.");
 	DEBUG("Setting status pin to %d.", STATUS_PIN);
 	iotWebConf.setStatusPin(STATUS_PIN);
+
 	for (uint8_t i = 0; i < sizeof(params) / sizeof(params[0]); i++)
 	{
 		DEBUG("Adding parameter %s.", params[i].label);
