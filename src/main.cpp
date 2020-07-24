@@ -71,8 +71,6 @@ void setup()
 	// Initialize publisher
 	// Setup WiFi and config stuff
 	DEBUG("Setting up WiFi and config stuff.");
-	DEBUG("Setting status pin to %d.", STATUS_PIN);
-	iotWebConf.setStatusPin(STATUS_PIN);
 
 	for (uint8_t i = 0; i < sizeof(params) / sizeof(params[0]); i++)
 	{

@@ -2,6 +2,7 @@
 #define SENSOR_H
 
 #include <SoftwareSerial.h>
+#include <jled.h>
 #include "debug.h"
 
 // SML constants
@@ -26,6 +27,9 @@ public:
     const uint8_t pin;
     const char *name;
     const bool numeric_only;
+    const bool status_led_enabled;
+    const bool status_led_inverted;
+    const uint8_t status_led_pin;
 };
 
 class Sensor
@@ -43,6 +47,13 @@ public:
         this->serial->enableRx(true);
         DEBUG("Initialized sensor %s.", this->config->name);
 
+        if (this->config->status_led_enabled) {
+            this->status_led = new JLed(this->config->status_led_pin);
+            if (this->config->status_led_inverted) {
+                this->status_led->LowActive();
+            }
+        }
+
         this->init_state();
     }
 
@@ -50,6 +61,10 @@ public:
     {
         this->run_current_state();
         yield();
+        if (this->config->status_led_enabled) {
+            this->status_led->Update();
+            yield();
+        }
     }
 
 private:
@@ -61,6 +76,7 @@ private:
     uint8_t loop_counter = 0;
     State state = INIT;
     void (*callback)(byte *buffer, size_t len, Sensor *sensor) = NULL;
+    JLed *status_led;
 
     void run_current_state()
     {
@@ -100,6 +116,7 @@ private:
     {
         return this->serial->read();
     }
+
 
     // Set state
     void set_state(State new_state)
@@ -155,6 +172,9 @@ private:
             {
                 // Start sequence has been found
                 DEBUG("Start sequence found.");
+                if (this->config->status_led_enabled) {
+                    this->status_led->Blink(50,50).Repeat(3);
+                }
                 this->set_state(READ_MESSAGE);
                 return;
             }
