@@ -106,17 +106,26 @@ The configuration of the reading heads is done by editing `src/config.h` and adj
 
 ```c++
 static const SensorConfig SENSOR_CONFIGS[] = {
-    {.pin = D2, // GPIO Pin
+    {.pin = D2, // GPIO pin of the phototransistor
      .name = "1", // Sensor name used in MQTT topic
-     .numeric_only = false // If "true", only numeric values are being published via MQTT
+     .numeric_only = false, // If "true", only numeric values are being published via MQTT
+     .status_led_enabled = true, // Flash status LED (3 times) when an SML start sequence has been found
+     .status_led_inverted = true, // Some LEDs (like the ESP8266 builtin LED) require an inverted output signal
+     .status_led_pin = LED_BUILTIN // GPIO pin used for sensor status LED
     },
     {.pin = D5,
      .name = "2",
-     .numeric_only = false
+     .numeric_only = false,
+     .status_led_enabled = true,
+     .status_led_inverted = true,
+     .status_led_pin = LED_BUILTIN
     },
     {.pin = D6,
-    .name = "3",
-    .numeric_only = false
+     .name = "3",
+     .numeric_only = false,
+     .status_led_enabled = true,
+     .status_led_inverted = true,
+     .status_led_pin = LED_BUILTIN
     }
 };
 ```
@@ -242,6 +251,7 @@ docker run -it --device /dev/ttyUSB0 -v $(pwd):/src --rm mruettgers/esptool ash 
 * [MicroDebug](https://github.com/rlogiacco/MicroDebug)
 * [MQTT](https://github.com/256dpi/arduino-mqtt)
 * [libSML](https://github.com/volkszaehler/libsml)
+* [JLed](https://github.com/jandelgado/jled)
 
 ### Links
 
