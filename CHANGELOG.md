@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.4] - 2020-07-24
+### Changed
+- Worked on the docs
+- Added LED based feedback for SML data recognition
+
 ## [2.1.3] - 2020-04-17
 ### Changed
 - Added hint to change AP password to the docs

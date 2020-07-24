@@ -4,7 +4,7 @@
 #include "Arduino.h"
 #include "Sensor.h"
 
-const char *VERSION = "2.1.3";
+const char *VERSION = "2.1.4";
 
 // Modifying the config version will probably cause a loss of the existig configuration.
 // Be careful!
