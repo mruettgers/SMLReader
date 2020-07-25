@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.5] - 2020-07-25
+### Changed
+- Modified MQTT topic to use / instead of * due to invalid character issues when used with ioBroker
+
 ## [2.1.4] - 2020-07-24
 ### Changed
 - Worked on the docs

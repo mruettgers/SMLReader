@@ -165,30 +165,30 @@ If everything is configured properly and running with a sensor in place, SMLRead
 
 ```
 MB-Monty ➜  ~  mosquitto_sub -h 10.4.32.103 -v -t smartmeter/mains/#
-smartmeter/mains/info Hello from 00C7551E, running SMLReader version 2.1.1.
-smartmeter/mains/sensor/1/obis/1-0:1.8.0*255/value 3546245.9
-smartmeter/mains/sensor/1/obis/1-0:2.8.0*255/value 13.2
-smartmeter/mains/sensor/1/obis/1-0:1.8.1*255/value 0.0
-smartmeter/mains/sensor/1/obis/1-0:2.8.1*255/value 13.2
-smartmeter/mains/sensor/1/obis/1-0:1.8.2*255/value 3546245.9
-smartmeter/mains/sensor/1/obis/1-0:2.8.2*255/value 0.0
-smartmeter/mains/sensor/1/obis/1-0:16.7.0*255/value 451.2
+smartmeter/mains/info Hello from 00C7551E, running SMLReader version 2.1.5.
+smartmeter/mains/sensor/1/obis/1-0:1.8.0/255/value 3546245.9
+smartmeter/mains/sensor/1/obis/1-0:2.8.0/255/value 13.2
+smartmeter/mains/sensor/1/obis/1-0:1.8.1/255/value 0.0
+smartmeter/mains/sensor/1/obis/1-0:2.8.1/255/value 13.2
+smartmeter/mains/sensor/1/obis/1-0:1.8.2/255/value 3546245.9
+smartmeter/mains/sensor/1/obis/1-0:2.8.2/255/value 0.0
+smartmeter/mains/sensor/1/obis/1-0:16.7.0/255/value 451.2
 
-smartmeter/mains/sensor/2/obis/1-0:1.8.0*255/value 3546245.9
-smartmeter/mains/sensor/2/obis/1-0:2.8.0*255/value 13.2
-smartmeter/mains/sensor/2/obis/1-0:1.8.1*255/value 0.0
-smartmeter/mains/sensor/2/obis/1-0:2.8.1*255/value 13.2
-smartmeter/mains/sensor/2/obis/1-0:1.8.2*255/value 3546245.9
-smartmeter/mains/sensor/2/obis/1-0:2.8.2*255/value 0.0
-smartmeter/mains/sensor/2/obis/1-0:16.7.0*255/value 451.2
+smartmeter/mains/sensor/2/obis/1-0:1.8.0/255/value 3546245.9
+smartmeter/mains/sensor/2/obis/1-0:2.8.0/255/value 13.2
+smartmeter/mains/sensor/2/obis/1-0:1.8.1/255/value 0.0
+smartmeter/mains/sensor/2/obis/1-0:2.8.1/255/value 13.2
+smartmeter/mains/sensor/2/obis/1-0:1.8.2/255/value 3546245.9
+smartmeter/mains/sensor/2/obis/1-0:2.8.2/255/value 0.0
+smartmeter/mains/sensor/2/obis/1-0:16.7.0/255/value 451.2
 
-smartmeter/mains/sensor/3/obis/1-0:1.8.0*255/value 3546245.9
-smartmeter/mains/sensor/3/obis/1-0:2.8.0*255/value 13.2
-smartmeter/mains/sensor/3/obis/1-0:1.8.1*255/value 0.0
-smartmeter/mains/sensor/3/obis/1-0:2.8.1*255/value 13.2
-smartmeter/mains/sensor/3/obis/1-0:1.8.2*255/value 3546245.9
-smartmeter/mains/sensor/3/obis/1-0:2.8.2*255/value 0.0
-smartmeter/mains/sensor/3/obis/1-0:16.7.0*255/value 451.2
+smartmeter/mains/sensor/3/obis/1-0:1.8.0/255/value 3546245.9
+smartmeter/mains/sensor/3/obis/1-0:2.8.0/255/value 13.2
+smartmeter/mains/sensor/3/obis/1-0:1.8.1/255/value 0.0
+smartmeter/mains/sensor/3/obis/1-0:2.8.1/255/value 13.2
+smartmeter/mains/sensor/3/obis/1-0:1.8.2/255/value 3546245.9
+smartmeter/mains/sensor/3/obis/1-0:2.8.2/255/value 0.0
+smartmeter/mains/sensor/3/obis/1-0:16.7.0/255/value 451.2
 ```
 
 ---
