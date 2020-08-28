@@ -2,10 +2,6 @@
 
 A smart meter (SML) to MQTT gateway
 
-## Documentation
-
-This documentation is a work in progress.
-
 ## About
 
 The aim of this project is to read the meter readings of modern energy meters and make them available via MQTT.
