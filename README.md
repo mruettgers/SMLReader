@@ -125,7 +125,6 @@ static const SensorConfig SENSOR_CONFIGS[] = {
     }
 };
 ```
-*Attention: Multi-sensor support is experimental and has not been tested due to the lack of multiple meters. For testing purposes I connected one reading head to multiple GPIO pins of my WeMos D1 mini.*
 
 
 #### Building
