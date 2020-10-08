@@ -153,6 +153,7 @@ UserSideException: Please install Git client from https://git-scm.com/downloads:
 
 WiFi and MQTT are configured via the web interface provided by [IotWebConf](https://github.com/prampec/IotWebConf) and which can be reached after joining the WiFi network named SMLReader and heading to http://192.168.4.1.   
 If the device has already been configured, the web interface can be reached via the IP address obtained from your local network's DHCP server.
+To login provide the user `admin` and the configured AP password.
 
 *Attention: You have to change the AP Password (empty by default), otherwise SMLReader won't work.*
 
