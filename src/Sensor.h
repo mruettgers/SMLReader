@@ -1,7 +1,7 @@
 #ifndef SENSOR_H
 #define SENSOR_H
 
-#include <SoftwareSerial.h>
+#include<SoftwareSerial.h>
 #include <jled.h>
 #include "debug.h"
 
@@ -30,6 +30,7 @@ public:
     const bool status_led_enabled;
     const bool status_led_inverted;
     const uint8_t status_led_pin;
+    const uint8_t interval;
 };
 
 class Sensor
@@ -72,6 +73,7 @@ private:
     byte buffer[BUFFER_SIZE];
     size_t position = 0;
     unsigned long last_state_reset = 0;
+    unsigned long last_callback_call = 0;
     uint8_t bytes_until_checksum = 0;
     uint8_t loop_counter = 0;
     State state = INIT;
@@ -238,7 +240,13 @@ private:
         // Call listener
         if (this->callback != NULL)
         {
-            this->callback(this->buffer, this->position, this);
+            if (this->config->interval == 0
+                || ((millis() - this->last_callback_call) > (this->config->interval * 1000))) {
+                
+                this->last_callback_call = millis();
+                this->callback(this->buffer, this->position, this);
+            }
+
         }
 
         // Start over

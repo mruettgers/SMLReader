@@ -107,21 +107,24 @@ static const SensorConfig SENSOR_CONFIGS[] = {
      .numeric_only = false, // If "true", only numeric values are being published via MQTT
      .status_led_enabled = true, // Flash status LED (3 times) when an SML start sequence has been found
      .status_led_inverted = true, // Some LEDs (like the ESP8266 builtin LED) require an inverted output signal
-     .status_led_pin = LED_BUILTIN // GPIO pin used for sensor status LED
+     .status_led_pin = LED_BUILTIN, // GPIO pin used for sensor status LED
+     .interval = 0 // If greater than 0, messages are published every [interval] seconds
     },
     {.pin = D5,
      .name = "2",
      .numeric_only = false,
      .status_led_enabled = true,
      .status_led_inverted = true,
-     .status_led_pin = LED_BUILTIN
+     .status_led_pin = LED_BUILTIN,
+     .interval = 0
     },
     {.pin = D6,
      .name = "3",
      .numeric_only = false,
      .status_led_enabled = true,
      .status_led_inverted = true,
-     .status_led_pin = LED_BUILTIN
+     .status_led_pin = LED_BUILTIN,
+     .interval = 15
     }
 };
 ```
