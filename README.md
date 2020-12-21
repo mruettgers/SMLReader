@@ -261,6 +261,10 @@ docker run -it --device /dev/ttyUSB0 -v $(pwd):/src --rm mruettgers/esptool ash 
 ### Buy me a coffee
 <a href="https://www.buymeacoffee.com/fkqeNT2" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-green.png" alt="Buy Me A Coffee" height="51" width="217"></a>
 
+## Roadmap
+
+* [ ] Use SPIFFS for config storage
+
 ## License
 
 Distributed under the GPL v3 license.  
