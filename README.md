@@ -1,10 +1,6 @@
 # SMLReader
 
-A smart meter (SML) to MQTT gateway
-
-## Documentation
-
-This documentation is a work in progress.
+An ESP8266 based smart meter (D0 / SML) to MQTT gateway 
 
 ## About
 
@@ -111,25 +107,27 @@ static const SensorConfig SENSOR_CONFIGS[] = {
      .numeric_only = false, // If "true", only numeric values are being published via MQTT
      .status_led_enabled = true, // Flash status LED (3 times) when an SML start sequence has been found
      .status_led_inverted = true, // Some LEDs (like the ESP8266 builtin LED) require an inverted output signal
-     .status_led_pin = LED_BUILTIN // GPIO pin used for sensor status LED
+     .status_led_pin = LED_BUILTIN, // GPIO pin used for sensor status LED
+     .interval = 0 // If greater than 0, messages are published every [interval] seconds
     },
     {.pin = D5,
      .name = "2",
      .numeric_only = false,
      .status_led_enabled = true,
      .status_led_inverted = true,
-     .status_led_pin = LED_BUILTIN
+     .status_led_pin = LED_BUILTIN,
+     .interval = 0
     },
     {.pin = D6,
      .name = "3",
      .numeric_only = false,
      .status_led_enabled = true,
      .status_led_inverted = true,
-     .status_led_pin = LED_BUILTIN
+     .status_led_pin = LED_BUILTIN,
+     .interval = 15
     }
 };
 ```
-*Attention: Multi-sensor support is experimental and has not been tested due to the lack of multiple meters. For testing purposes I connected one reading head to multiple GPIO pins of my WeMos D1 mini.*
 
 
 #### Building
@@ -158,6 +156,7 @@ UserSideException: Please install Git client from https://git-scm.com/downloads:
 
 WiFi and MQTT are configured via the web interface provided by [IotWebConf](https://github.com/prampec/IotWebConf) and which can be reached after joining the WiFi network named SMLReader and heading to http://192.168.4.1.   
 If the device has already been configured, the web interface can be reached via the IP address obtained from your local network's DHCP server.
+To login provide the user `admin` and the configured AP password.
 
 *Attention: You have to change the AP Password (empty by default), otherwise SMLReader won't work.*
 
@@ -262,7 +261,12 @@ docker run -it --device /dev/ttyUSB0 -v $(pwd):/src --rm mruettgers/esptool ash 
 
 ## Donate
 
+### Buy me a coffee
 <a href="https://www.buymeacoffee.com/fkqeNT2" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-green.png" alt="Buy Me A Coffee" height="51" width="217"></a>
+
+## Roadmap
+
+* [ ] Use SPIFFS for config storage
 
 ## License
 

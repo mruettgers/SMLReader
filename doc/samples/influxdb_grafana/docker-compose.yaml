@@ -1,0 +1,48 @@
+version: '2'
+services:
+  influxdb:
+    image: influxdb:latest
+    ports:
+      - '8086:8086'
+    volumes:
+      - influxdb-storage:/var/lib/influxdb
+    environment:
+      - INFLUXDB_ADMIN_USER=${INFLUXDB_ADMIN_USERNAME}
+      - INFLUXDB_ADMIN_PASSWORD=${INFLUXDB_ADMIN_PASSWORD}
+
+  chronograf:
+    image: chronograf:latest
+    ports:
+      - '8888:8888'
+    volumes:
+      - chronograf-storage:/var/lib/chronograf
+    depends_on:
+      - influxdb
+    environment:
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_USERNAME=${INFLUXDB_ADMIN_USERNAME}
+      - INFLUXDB_PASSWORD=${INFLUXDB_ADMIN_PASSWORD}
+
+  telegraf:
+    image: telegraf:latest
+    links:
+      - influxdb
+    volumes:
+    - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - '3000:3000'
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - influxdb
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USERNAME}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+
+volumes:
+  influxdb-storage:
+  chronograf-storage:
+  grafana-storage:
