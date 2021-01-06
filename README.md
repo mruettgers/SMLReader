@@ -10,6 +10,8 @@ The software was primarily developed and tested for the EMH ED300L electricity m
 
 SMLReader publishes the metrics read from the meter's optical unit to an MQTT broker configured via the provided web interface.
 
+If you like this project, you might consider to support me to by [donating](#donate).
+
 ### Screenshots
 ![WiFi and MQTT setup](doc/screenshots/screenshot_setup.png)
 ![Grafana](doc/screenshots/screenshot_grafana.png)
@@ -260,6 +262,12 @@ docker run -it --device /dev/ttyUSB0 -v $(pwd):/src --rm mruettgers/esptool ash 
 * https://github.com/gemu2015/Sonoff-Tasmota (Gemu's excellent Tasmota version with SML support)
 
 ## Donate
+
+### Bitcoin
+16XujKGLtx1Lp9ZTvdbpY6Km7jbLHjW2sD
+
+### Paypal
+[![Paypal](https://www.paypalobjects.com/en_US/DK/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=GK95YZCEGJT84)
 
 ### Buy me a coffee
 <a href="https://www.buymeacoffee.com/fkqeNT2" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-green.png" alt="Buy Me A Coffee" height="51" width="217"></a>
