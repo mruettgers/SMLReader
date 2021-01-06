@@ -10,7 +10,7 @@ The software was primarily developed and tested for the EMH ED300L electricity m
 
 SMLReader publishes the metrics read from the meter's optical unit to an MQTT broker configured via the provided web interface.
 
-If you like this project, you might consider to support me to by [donating](#donate).
+If you like this project, you might consider to support me by [donating](#donate).
 
 ### Screenshots
 ![WiFi and MQTT setup](doc/screenshots/screenshot_setup.png)
