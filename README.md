@@ -15,6 +15,17 @@ If you like this project, you might consider to [support me](#donate).
 ### Screenshots
 ![WiFi and MQTT setup](doc/screenshots/screenshot_setup.png)
 ![Grafana](doc/screenshots/screenshot_grafana.png)
+```bash
+MB-Monty ➜  ~  mosquitto_sub -h 10.4.32.103 -v -t smartmeter/mains/#
+smartmeter/mains/info Hello from 00C7551E, running SMLReader version 2.1.5.
+smartmeter/mains/sensor/1/obis/1-0:1.8.0/255/value 3546245.9
+smartmeter/mains/sensor/1/obis/1-0:2.8.0/255/value 13.2
+smartmeter/mains/sensor/1/obis/1-0:1.8.1/255/value 0.0
+smartmeter/mains/sensor/1/obis/1-0:2.8.1/255/value 13.2
+smartmeter/mains/sensor/1/obis/1-0:1.8.2/255/value 3546245.9
+smartmeter/mains/sensor/1/obis/1-0:2.8.2/255/value 0.0
+smartmeter/mains/sensor/1/obis/1-0:16.7.0/255/value 451.2
+```
 
 ### Hardware
 
@@ -275,6 +286,8 @@ docker run -it --device /dev/ttyUSB0 -v $(pwd):/src --rm mruettgers/esptool ash 
 ## Roadmap
 
 * [ ] Use SPIFFS for config storage
+* [ ] Configuration of sensors via web interface
+* [ ] Grafana / InfluxDB tutorial based on docker
 
 ## License
 
