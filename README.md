@@ -287,6 +287,9 @@ docker run -it --device /dev/ttyUSB0 -v $(pwd):/src --rm mruettgers/esptool ash 
 
 * [ ] Use SPIFFS for config storage
 * [ ] Configuration of sensors via web interface
+* [ ] Add list of devices that are known to work
+* [ ] Support for ASCII based SML messages (also known as "SML in Textform")
+* [ ] Deep sleep for battery powered devices
 * [ ] Grafana / InfluxDB tutorial based on docker
 
 ## License
