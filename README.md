@@ -291,6 +291,7 @@ docker run -it --device /dev/ttyUSB0 -v $(pwd):/src --rm mruettgers/esptool ash 
 * [ ] Support for ASCII based SML messages (also known as "SML in Textform")
 * [ ] Deep sleep for battery powered devices
 * [ ] Grafana / InfluxDB tutorial based on docker
+* [ ] Arduino fork with KNX support for Siemens 5WG1 117-2AB12 BCU
 
 ## License
 
