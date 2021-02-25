@@ -1,6 +1,6 @@
 # SMLReader
 
-An ESP8266 based smart meter (D0 / SML) to MQTT gateway 
+An ESP8266 based smart meter (SML) to MQTT gateway 
 
 ## About
 
