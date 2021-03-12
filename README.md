@@ -285,7 +285,8 @@ docker run -it --device /dev/ttyUSB0 -v $(pwd):/src --rm mruettgers/esptool ash 
 
 ## Roadmap
 
-* [ ] Use SPIFFS for config storage
+* [ ] Use LITTLEFS for config storage
+* [ ] New configuration GUI based on Preact
 * [ ] Configuration of sensors via web interface
 * [ ] Add list of devices that are known to work
 * [ ] Support for ASCII based SML messages (also known as "SML in Textform")
