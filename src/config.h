@@ -20,15 +20,7 @@ static const SensorConfig SENSOR_CONFIGS[] = {
      .status_led_enabled = true,
      .status_led_inverted = true,
      .status_led_pin = LED_BUILTIN,
-     .interval = 20},
-     {.pin = D5,
-     .name = "2",
-     .numeric_only = false,
-     .status_led_enabled = true,
-     .status_led_inverted = true,
-     .status_led_pin = LED_BUILTIN,
-     .interval = 20
-    }};
+     .interval = 0}};
 
 const uint8_t NUM_OF_SENSORS = sizeof(SENSOR_CONFIGS) / sizeof(SensorConfig);
 
