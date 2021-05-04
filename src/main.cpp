@@ -40,9 +40,7 @@ void process_message(byte *buffer, size_t len, Sensor *sensor)
 
 	DEBUG_SML_FILE(file);
 
-	if (connected) {
-		publisher.publish(sensor, file);
-	}
+	publisher.publish(sensor, file);
 
 	// free the malloc'd memory
 	sml_file_free(file);
@@ -107,12 +105,6 @@ void setup()
 
 void loop()
 {
-	// Publisher
-	if (connected) {
-		publisher.loop();
-		yield();
-	}
-
 	if (needReset)
 	{
 		// Doing a chip reset caused by config changes
