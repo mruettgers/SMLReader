@@ -261,7 +261,8 @@ docker run -it --device /dev/ttyUSB0 -v $(pwd):/src --rm mruettgers/esptool ash 
 * [ESPSoftwareSerial](https://github.com/plerup/espsoftwareserial)
 * [IotWebConf](https://github.com/prampec/IotWebConf)
 * [MicroDebug](https://github.com/rlogiacco/MicroDebug)
-* [MQTT](https://github.com/256dpi/arduino-mqtt)
+* [ESPAsyncTCP](https://github.com/me-no-dev/ESPAsyncTCP)
+* [Pangolin MQTT Client](https://github.com/philbowles/PangolinMQTT)
 * [libSML](https://github.com/volkszaehler/libsml)
 * [JLed](https://github.com/jandelgado/jled)
 
