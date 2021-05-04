@@ -1,9 +1,11 @@
 #ifndef SENSOR_H
 #define SENSOR_H
 
-#include<SoftwareSerial.h>
+#include <SoftwareSerial.h>
 #include <jled.h>
 #include "debug.h"
+
+using namespace std;
 
 // SML constants
 const byte START_SEQUENCE[] = {0x1B, 0x1B, 0x1B, 0x1B, 0x01, 0x01, 0x01, 0x01};
@@ -15,11 +17,22 @@ const uint8_t READ_TIMEOUT = 30;
 enum State
 {
     INIT,
+    STANDBY,
     WAIT_FOR_START_SEQUENCE,
     READ_MESSAGE,
     PROCESS_MESSAGE,
     READ_CHECKSUM
 };
+
+uint64_t millis64()
+{
+    static uint32_t low32, high32;
+    uint32_t new_low32 = millis();
+    if (new_low32 < low32)
+        high32++;
+    low32 = new_low32;
+    return (uint64_t)high32 << 32 | low32;
+}
 
 class SensorConfig
 {
@@ -37,20 +50,22 @@ class Sensor
 {
 public:
     const SensorConfig *config;
-    Sensor(const SensorConfig *config, void (*callback)(byte *buffer, size_t len,  Sensor *sensor))
+    Sensor(const SensorConfig *config, void (*callback)(byte *buffer, size_t len, Sensor *sensor))
     {
         this->config = config;
         DEBUG("Initializing sensor %s...", this->config->name);
         this->callback = callback;
-        this->serial = new SoftwareSerial();
+        this->serial = unique_ptr<SoftwareSerial>(new SoftwareSerial());
         this->serial->begin(9600, SWSERIAL_8N1, this->config->pin, -1, false);
         this->serial->enableTx(false);
         this->serial->enableRx(true);
         DEBUG("Initialized sensor %s.", this->config->name);
 
-        if (this->config->status_led_enabled) {
-            this->status_led = new JLed(this->config->status_led_pin);
-            if (this->config->status_led_inverted) {
+        if (this->config->status_led_enabled)
+        {
+            this->status_led = unique_ptr<JLed>(new JLed(this->config->status_led_pin));
+            if (this->config->status_led_inverted)
+            {
                 this->status_led->LowActive();
             }
         }
@@ -62,35 +77,39 @@ public:
     {
         this->run_current_state();
         yield();
-        if (this->config->status_led_enabled) {
+        if (this->config->status_led_enabled)
+        {
             this->status_led->Update();
             yield();
         }
     }
 
 private:
-    SoftwareSerial *serial;
+    unique_ptr<SoftwareSerial> serial;
     byte buffer[BUFFER_SIZE];
     size_t position = 0;
     unsigned long last_state_reset = 0;
-    unsigned long last_callback_call = 0;
+    uint64_t standby_until = 0;
     uint8_t bytes_until_checksum = 0;
     uint8_t loop_counter = 0;
     State state = INIT;
     void (*callback)(byte *buffer, size_t len, Sensor *sensor) = NULL;
-    JLed *status_led;
+    unique_ptr<JLed> status_led;
 
     void run_current_state()
     {
         if (this->state != INIT)
         {
-            if ((millis() - this->last_state_reset) > (READ_TIMEOUT * 1000))
+            if (this->state != STANDBY && ((millis() - this->last_state_reset) > (READ_TIMEOUT * 1000)))
             {
                 DEBUG("Did not receive an SML message within %d seconds, starting over.", READ_TIMEOUT);
                 this->reset_state();
             }
             switch (this->state)
             {
+            case STANDBY:
+                this->standby();
+                break;
             case WAIT_FOR_START_SEQUENCE:
                 this->wait_for_start_sequence();
                 break;
@@ -119,11 +138,14 @@ private:
         return this->serial->read();
     }
 
-
     // Set state
     void set_state(State new_state)
     {
-        if (new_state == WAIT_FOR_START_SEQUENCE)
+        if (new_state == STANDBY)
+        {
+            DEBUG("State of sensor %s is 'STANDBY'.", this->config->name);
+        }
+        else if (new_state == WAIT_FOR_START_SEQUENCE)
         {
             DEBUG("State of sensor %s is 'WAIT_FOR_START_SEQUENCE'.", this->config->name);
             this->last_state_reset = millis();
@@ -161,6 +183,21 @@ private:
         this->init_state();
     }
 
+    void standby()
+    {
+        // Keep buffers clean
+        while (this->data_available())
+        {
+            this->data_read();
+            yield();
+        }
+
+        if (millis64() >= this->standby_until)
+        {
+            this->reset_state();
+        }
+    }
+
     // Wait for the start_sequence to appear
     void wait_for_start_sequence()
     {
@@ -174,8 +211,9 @@ private:
             {
                 // Start sequence has been found
                 DEBUG("Start sequence found.");
-                if (this->config->status_led_enabled) {
-                    this->status_led->Blink(50,50).Repeat(3);
+                if (this->config->status_led_enabled)
+                {
+                    this->status_led->Blink(50, 50).Repeat(3);
                 }
                 this->set_state(READ_MESSAGE);
                 return;
@@ -237,19 +275,25 @@ private:
     {
         DEBUG("Message is being processed.");
 
+        if (this->config->interval > 0)
+        {
+            this->standby_until = millis64() + (this->config->interval * 1000);
+        }
+
         // Call listener
         if (this->callback != NULL)
         {
-            if (this->config->interval == 0
-                || ((millis() - this->last_callback_call) > (this->config->interval * 1000))) {
-                
-                this->last_callback_call = millis();
-                this->callback(this->buffer, this->position, this);
-            }
-
+            this->callback(this->buffer, this->position, this);
         }
 
-        // Start over
+        // Go to standby mode, if throttling is enabled
+        if (this->config->interval > 0)
+        {
+            this->set_state(STANDBY);
+            return;
+        }
+
+        // Start over if throttling is disabled
         this->reset_state();
     }
 };
