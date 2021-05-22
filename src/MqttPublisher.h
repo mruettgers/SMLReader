@@ -226,10 +226,6 @@ private:
                              //  99.99% unlikely to ever happen, but this message is better than a crash, non?
         DEBUG(F("MQTT: X_INVALID_LENGTH info=%02x"), info);
         break;
-      case NO_SERVER_DETAILS: //
-                              //  99.99% unlikely to ever happen, make sure you call setServer before trying to connect!!!
-        DEBUG(F("MQTT: NO_SERVER_DETAILS info=%02x"), info);
-        break;
       default:
         DEBUG(F("MQTT: UNKNOWN ERROR: %u extra info %d"), e, info);
         break;
