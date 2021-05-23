@@ -10,6 +10,11 @@
 #include <Ticker.h>
 
 #define MQTT_RECONNECT_DELAY 5
+#define MQTT_LWT_TOPIC "LWT"
+#define MQTT_LWT_RETAIN true
+#define MQTT_LWT_QOS 2
+#define MQTT_LWT_PAYLOAD_ONLINE "Online"
+#define MQTT_LWT_PAYLOAD_OFFLINE "Offline"
 
 using namespace std;
 
@@ -38,6 +43,7 @@ public:
     }
 
     client.setCleanSession(true);
+    client.setWill(String(baseTopic + MQTT_LWT_TOPIC).c_str(), MQTT_LWT_QOS, MQTT_LWT_RETAIN, MQTT_LWT_PAYLOAD_OFFLINE);
     client.setKeepAlive(MQTT_RECONNECT_DELAY * 3);
 
     this->registerHandlers();
@@ -141,27 +147,27 @@ private:
   Ticker reconnectTimer;
   String baseTopic;
 
-  void publish(const String &topic, const String &payload)
+  void publish(const String &topic, const String &payload, uint8_t qos=0, bool retain=false)
   {
-    publish(topic.c_str(), payload.c_str());
+    publish(topic.c_str(), payload.c_str(), qos, retain);
   }
-  void publish(String &topic, const char *payload)
+  void publish(String &topic, const char *payload, uint8_t qos=0, bool retain=false)
   {
-    publish(topic.c_str(), payload);
+    publish(topic.c_str(), payload, qos, retain);
   }
-  void publish(const char *topic, const String &payload)
+  void publish(const char *topic, const String &payload, uint8_t qos=0, bool retain=false)
   {
-    publish(topic, payload.c_str());
+    publish(topic, payload.c_str(), qos, retain);
   }
 
 
-  void publish(const char *topic, const char *payload)
+  void publish(const char *topic, const char *payload, uint8_t qos=0, bool retain=false)
   {
     if (this->connected)
     {
       DEBUG(F("MQTT: Publishing to %s:"), topic);
       DEBUG(F("%s\n"), payload);
-      client.publish(topic, payload, strlen(payload));
+      client.publish(topic, payload, strlen(payload), qos, retain);
     }
   }
 
@@ -174,6 +180,7 @@ private:
       char message[64];
       snprintf(message, 64, "Hello from %08X, running SMLReader version %s.", ESP.getChipId(), VERSION);
       info(message);
+      publish(baseTopic + MQTT_LWT_TOPIC, MQTT_LWT_PAYLOAD_ONLINE, MQTT_LWT_QOS, MQTT_LWT_RETAIN);
     });
     client.onDisconnect([this](int8_t reason) {
       this->connected = false;
