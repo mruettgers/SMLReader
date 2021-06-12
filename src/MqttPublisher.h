@@ -49,6 +49,10 @@ public:
     this->registerHandlers();
   }
 
+  bool canPublish() {
+    return this->connected;
+  }
+
   void debug(const char *message)
   {
     publish(baseTopic + "debug", message);

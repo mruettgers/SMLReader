@@ -40,7 +40,12 @@ void process_message(byte *buffer, size_t len, Sensor *sensor)
 
 	DEBUG_SML_FILE(file);
 
-	publisher.publish(sensor, file);
+	if (publisher.canPublish()) {
+		publisher.publish(sensor, file);
+		// Put device into deep sleep
+		ESP.deepSleep(300 * 1000000);
+  		yield();
+	}
 
 	// free the malloc'd memory
 	sml_file_free(file);
