@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.1] - 2022-03-17
+### Changed
+- [Issue #19](https://github.com/mruettgers/SMLReader/issues/19)
+### Fixed
+- The max length of the WiFi password has been increased to 64 chars
+
 ## [2.2.0] - 2021-05-04
 ### Changed
 - Replaced MQTT client library with [Pangolin MQTT Client](https://github.com/philbowles/PangolinMQTT)
