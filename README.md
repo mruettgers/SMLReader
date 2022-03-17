@@ -275,14 +275,8 @@ docker run -it --device /dev/ttyUSB0 -v $(pwd):/src --rm mruettgers/esptool ash 
 
 ## Donate
 
-### Bitcoin
-16XujKGLtx1Lp9ZTvdbpY6Km7jbLHjW2sD
-
 ### Paypal
 [![Paypal](https://www.paypalobjects.com/en_US/DK/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=GK95YZCEGJT84)
-
-### Buy me a coffee
-<a href="https://www.buymeacoffee.com/fkqeNT2" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-green.png" alt="Buy Me A Coffee" height="51" width="217"></a>
 
 ## Roadmap
 
