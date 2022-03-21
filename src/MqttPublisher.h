@@ -25,6 +25,7 @@ struct MqttConfig
   char username[128] = "";
   char password[128] = "";
   char topic[128] = "iot/smartmeter/";
+  char jsonPayload[9] = "";
 };
 
 class MqttPublisher
@@ -50,10 +51,19 @@ public:
       client.setCredentials(config.username, config.password);
     }
     client.setCleanSession(true);
-    client.setWill(lastWillTopic.c_str(), MQTT_LWT_QOS, MQTT_LWT_RETAIN, MQTT_LWT_PAYLOAD_OFFLINE);
+    if(config.jsonPayload[0] == 's')
+    {
+      const char* willTopic = lastWillTopic.c_str();
+      const char* buf = new_json_wrap(willTopic, MQTT_LWT_PAYLOAD_OFFLINE);
+      client.setWill(willTopic, MQTT_LWT_QOS, MQTT_LWT_RETAIN, buf);
+      delete buf;
+    }
+    else
+    {
+      client.setWill(lastWillTopic.c_str(), MQTT_LWT_QOS, MQTT_LWT_RETAIN, MQTT_LWT_PAYLOAD_OFFLINE);
+    }
     client.setKeepAlive(MQTT_RECONNECT_DELAY * 3);
     this->registerHandlers();
-  
   }
 
   void debug(const char *message)
@@ -145,7 +155,11 @@ public:
     }
     DEBUG(F("MQTT: Disconnecting from broker..."));
     client.disconnect();
-    this->reconnectTimer.detach();
+  }
+
+  bool isConnected()
+  { 
+    return connected; 
   }
 
 private:
@@ -175,14 +189,48 @@ private:
     if (this->connected)
     {
       DEBUG(F("MQTT: Publishing to %s:"), topic);
-      DEBUG(F("%s\n"), payload);
-      client.publish(topic, qos, retain, payload, strlen(payload));
+      if(config.jsonPayload[0] == 's')
+      {
+        const char* buf = new_json_wrap(topic, payload);
+        DEBUG(F("%s\n"), buf);
+        client.publish(topic, qos, retain, buf, strlen(buf));
+        delete buf;
+      }
+      else
+      {        
+        DEBUG(F("%s\n"), payload);
+        client.publish(topic, qos, retain, payload, strlen(payload));
+      }
     }
+  }
+
+  const char* new_json_wrap(const char* topic, const char* payload)
+  {
+    const char* subtopic = topic + baseTopic.length();
+    size_t bufsize = strlen(payload) + strlen(subtopic) + 8;
+    char* buf = new char[bufsize];
+    bool payloadIsNumber = true;
+    for (const char* i = payload; *i != '\0'; i++)
+    {
+        if (!isdigit(*i))
+        {
+          payloadIsNumber = false;
+          break;
+        }
+    }
+    if(payloadIsNumber)
+    {
+      sniprintf(buf, bufsize, "{\"%s\":%s}", subtopic, payload);
+    }
+    else
+    {
+      sniprintf(buf, bufsize, "{\"%s\":\"%s\"}", subtopic, payload);
+    }    
+    return buf;
   }
 
   void registerHandlers()
   {
-
     client.onConnect([this](bool sessionPresent) {
       this->connected = true;
       this->reconnectTimer.detach();
@@ -197,7 +245,7 @@ private:
       DEBUG(F("MQTT: Disconnected. Reason: %d."), reason);
       reconnectTimer.attach(MQTT_RECONNECT_DELAY, [this]() {
         if (WiFi.isConnected()) {
-          this->connect();          
+          this->connect();
         }
       });
     });
