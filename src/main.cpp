@@ -7,31 +7,33 @@
 #include "MqttPublisher.h"
 #include "EEPROM.h"
 #include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266HTTPUpdateServer.h>
 
-std::list<Sensor*> *sensors = new std::list<Sensor*>();
+std::list<Sensor *> *sensors = new std::list<Sensor *>();
 
 void wifiConnected();
 void configSaved();
 
 DNSServer dnsServer;
 WebServer server(80);
-HTTPUpdateServer httpUpdater;
+ESP8266HTTPUpdateServer httpUpdater;
 WiFiClient net;
 
 MqttConfig mqttConfig;
 MqttPublisher publisher;
 
 IotWebConf iotWebConf(WIFI_AP_SSID, &dnsServer, &server, WIFI_AP_DEFAULT_PASSWORD, CONFIG_VERSION);
-IotWebConfParameter params[] = {
-	IotWebConfParameter("MQTT server", "mqttServer", mqttConfig.server, sizeof(mqttConfig.server), "text", NULL, mqttConfig.server, NULL, true),
-	IotWebConfParameter("MQTT port", "mqttPort", mqttConfig.port, sizeof(mqttConfig.port), "text", NULL, mqttConfig.port, NULL, true),
-	IotWebConfParameter("MQTT username", "mqttUsername", mqttConfig.username, sizeof(mqttConfig.username), "text", NULL, mqttConfig.username, NULL, true),
-	IotWebConfParameter("MQTT password", "mqttPassword", mqttConfig.password, sizeof(mqttConfig.password), "password", NULL, mqttConfig.password, NULL, true),
-	IotWebConfParameter("MQTT topic", "mqttTopic", mqttConfig.topic, sizeof(mqttConfig.topic), "text", NULL, mqttConfig.topic, NULL, true)};
+
+iotwebconf::TextParameter mqttServerParam = iotwebconf::TextParameter("MQTT server", "mqttServer", mqttConfig.server, sizeof(mqttConfig.server), nullptr, mqttConfig.server);
+iotwebconf::TextParameter mqttPortParam = iotwebconf::TextParameter("MQTT port", "mqttPort", mqttConfig.port, sizeof(mqttConfig.port), nullptr, mqttConfig.port);
+iotwebconf::TextParameter mqttUsernameParam = iotwebconf::TextParameter("MQTT username", "mqttUsername", mqttConfig.username, sizeof(mqttConfig.username), nullptr, mqttConfig.username);
+iotwebconf::PasswordParameter mqttPasswordParam = iotwebconf::PasswordParameter("MQTT password", "mqttPassword", mqttConfig.password, sizeof(mqttConfig.password), nullptr, mqttConfig.password);
+iotwebconf::TextParameter mqttTopicParam = iotwebconf::TextParameter("MQTT topic", "mqttTopic", mqttConfig.topic, sizeof(mqttConfig.topic), nullptr, mqttConfig.topic);
+iotwebconf::ParameterGroup paramGroup = iotwebconf::ParameterGroup("group1", "");
 
 boolean needReset = false;
 boolean connected = false;
-
 
 void process_message(byte *buffer, size_t len, Sensor *sensor)
 {
@@ -58,7 +60,7 @@ void setup()
 
 	// Setup reading heads
 	DEBUG("Setting up %d configured sensors...", NUM_OF_SENSORS);
-	const SensorConfig *config  = SENSOR_CONFIGS;
+	const SensorConfig *config = SENSOR_CONFIGS;
 	for (uint8_t i = 0; i < NUM_OF_SENSORS; i++, config++)
 	{
 		Sensor *sensor = new Sensor(config, process_message);
@@ -70,26 +72,28 @@ void setup()
 	// Setup WiFi and config stuff
 	DEBUG("Setting up WiFi and config stuff.");
 
-	for (uint8_t i = 0; i < sizeof(params) / sizeof(params[0]); i++)
-	{
-		DEBUG("Adding parameter %s.", params[i].label);
-		iotWebConf.addParameter(&params[i]);
-	}
+	paramGroup.addItem(&mqttServerParam);
+	paramGroup.addItem(&mqttPortParam);
+	paramGroup.addItem(&mqttUsernameParam);
+	paramGroup.addItem(&mqttPasswordParam);
+	paramGroup.addItem(&mqttTopicParam);
+
+	iotWebConf.addParameterGroup(&paramGroup);
+
 	iotWebConf.setConfigSavedCallback(&configSaved);
 	iotWebConf.setWifiConnectionCallback(&wifiConnected);
-	iotWebConf.setupUpdateServer(&httpUpdater);
+
+	// -- Define how to handle updateServer calls.
+	iotWebConf.setupUpdateServer(
+		[](const char *updatePath)
+		{ httpUpdater.setup(&server, updatePath); },
+		[](const char *userName, char *password)
+		{ httpUpdater.updateCredentials(userName, password); });
 
 	boolean validConfig = iotWebConf.init();
 	if (!validConfig)
 	{
 		DEBUG("Missing or invalid config. MQTT publisher disabled.");
-		MqttConfig defaults;
-		// Resetting to default values
-		strcpy(mqttConfig.server, defaults.server);
-		strcpy(mqttConfig.port, defaults.port);
-		strcpy(mqttConfig.username, defaults.username);
-		strcpy(mqttConfig.password, defaults.password);
-		strcpy(mqttConfig.topic, defaults.topic);
 	}
 	else
 	{
