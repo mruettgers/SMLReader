@@ -26,14 +26,13 @@ MqttPublisher publisher;
 IotWebConf iotWebConf(WIFI_AP_SSID, &dnsServer, &server, WIFI_AP_DEFAULT_PASSWORD, CONFIG_VERSION);
 
 iotwebconf::TextParameter mqttServerParam = iotwebconf::TextParameter("MQTT server", "mqttServer", mqttConfig.server, sizeof(mqttConfig.server), nullptr, mqttConfig.server);
-iotwebconf::TextParameter mqttPortParam = iotwebconf::TextParameter("MQTT port", "mqttPort", mqttConfig.port, sizeof(mqttConfig.port), nullptr, mqttConfig.port);
+iotwebconf::NumberParameter mqttPortParam = iotwebconf::NumberParameter("MQTT port", "mqttPort", mqttConfig.port, sizeof(mqttConfig.port), nullptr, mqttConfig.port);
 iotwebconf::TextParameter mqttUsernameParam = iotwebconf::TextParameter("MQTT username", "mqttUsername", mqttConfig.username, sizeof(mqttConfig.username), nullptr, mqttConfig.username);
 iotwebconf::PasswordParameter mqttPasswordParam = iotwebconf::PasswordParameter("MQTT password", "mqttPassword", mqttConfig.password, sizeof(mqttConfig.password), nullptr, mqttConfig.password);
 iotwebconf::TextParameter mqttTopicParam = iotwebconf::TextParameter("MQTT topic", "mqttTopic", mqttConfig.topic, sizeof(mqttConfig.topic), nullptr, mqttConfig.topic);
-iotwebconf::ParameterGroup paramGroup = iotwebconf::ParameterGroup("group1", "");
+iotwebconf::ParameterGroup paramGroup = iotwebconf::ParameterGroup("MQTT Settings", "");
 
 boolean needReset = false;
-boolean connected = false;
 
 void process_message(byte *buffer, size_t len, Sensor *sensor)
 {
@@ -83,6 +82,11 @@ void setup()
 	iotWebConf.setConfigSavedCallback(&configSaved);
 	iotWebConf.setWifiConnectionCallback(&wifiConnected);
 
+
+	WiFi.onStationModeDisconnected([](const WiFiEventStationModeDisconnected& event) {
+      publisher.disconnect();
+    });
+
 	// -- Define how to handle updateServer calls.
 	iotWebConf.setupUpdateServer(
 		[](const char *updatePath)
@@ -101,7 +105,8 @@ void setup()
 		publisher.setup(mqttConfig);
 	}
 
-	server.on("/", [] { iotWebConf.handleConfig(); });
+	server.on("/", []() { iotWebConf.handleConfig(); });
+	server.on("/reset", []() { needReset = true; });
 	server.onNotFound([]() { iotWebConf.handleNotFound(); });
 
 	DEBUG("Setup done.");
@@ -134,6 +139,5 @@ void configSaved()
 void wifiConnected()
 {
 	DEBUG("WiFi connection established.");
-	connected = true;
 	publisher.connect();
 }
