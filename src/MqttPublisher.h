@@ -53,10 +53,11 @@ public:
     client.setCleanSession(true);
     if(config.jsonPayload[0] == 's')
     {
-      const char* willTopic = lastWillTopic.c_str();
-      const char* buf = new_json_wrap(willTopic, MQTT_LWT_PAYLOAD_OFFLINE);
-      client.setWill(willTopic, MQTT_LWT_QOS, MQTT_LWT_RETAIN, buf);
-      delete buf;
+      if(lastWillJsonPayload != 0){
+        delete lastWillJsonPayload;
+      }
+      lastWillJsonPayload = new_json_wrap(lastWillTopic.c_str(), MQTT_LWT_PAYLOAD_OFFLINE);
+      client.setWill(lastWillTopic.c_str(), MQTT_LWT_QOS, MQTT_LWT_RETAIN, lastWillJsonPayload);
     }
     else
     {
@@ -169,6 +170,7 @@ private:
   Ticker reconnectTimer;
   String baseTopic;
   String lastWillTopic;
+  const char* lastWillJsonPayload = 0;
 
   void publish(const String &topic, const String &payload, uint8_t qos=0, bool retain=false)
   {
