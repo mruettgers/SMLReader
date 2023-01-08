@@ -1,7 +1,9 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-#include "FormattingSerialDebug.h"
+#define ARDUINO_ARCH_ESP8266
+#include <FormattingSerialDebug.h>
+
 #include <sml/sml_file.h>
 #include <sml/sml_value.h>
 #include "unit.h"

@@ -6,9 +6,15 @@
 #include <IotWebConf.h>
 #include "MqttPublisher.h"
 #include "EEPROM.h"
+#ifdef ESP32_ETH
+#include <ETH.h>
+#include <WebServer.h>
+#include <HTTPUpdateServer.h>
+#else
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPUpdateServer.h>
+#endif
 
 std::list<Sensor *> *sensors = new std::list<Sensor *>();
 
@@ -17,7 +23,11 @@ void configSaved();
 
 DNSServer dnsServer;
 WebServer server(80);
+#ifdef ESP32_ETH
+HTTPUpdateServer httpUpdater;
+#else
 ESP8266HTTPUpdateServer httpUpdater;
+#endif
 WiFiClient net;
 
 MqttConfig mqttConfig;
@@ -33,6 +43,57 @@ iotwebconf::TextParameter mqttTopicParam = iotwebconf::TextParameter("MQTT topic
 iotwebconf::ParameterGroup paramGroup = iotwebconf::ParameterGroup("MQTT Settings", "");
 
 boolean needReset = false;
+boolean validConfig = false;
+
+bool eth_connected = false;
+void OnEthernetEvent(WiFiEvent_t event)
+{
+  switch (event) {
+    case ARDUINO_EVENT_ETH_START:
+      Serial.println("ETH Started");
+      //set eth hostname here
+      ETH.setHostname("esp32-ethernet");
+      break;
+    case ARDUINO_EVENT_ETH_CONNECTED:
+      Serial.println("ETH Connected");
+      break;
+    case ARDUINO_EVENT_ETH_GOT_IP:
+      Serial.print("ETH MAC: ");
+      Serial.print(ETH.macAddress());
+      Serial.print(", IPv4: ");
+      Serial.print(ETH.localIP());
+      if (ETH.fullDuplex()) {
+        Serial.print(", FULL_DUPLEX");
+      }
+      Serial.print(", ");
+      Serial.print(ETH.linkSpeed());
+      Serial.println("Mbps");
+      eth_connected = true;
+	  if (validConfig)
+	  {
+		publisher.connect();
+	  }
+      break;
+    case ARDUINO_EVENT_ETH_DISCONNECTED:
+      Serial.println("ETH Disconnected");
+      eth_connected = false;
+	  if (validConfig)
+	  {
+		publisher.disconnect();
+	  }
+      break;
+    case ARDUINO_EVENT_ETH_STOP:
+      Serial.println("ETH Stopped");
+      eth_connected = false;
+	  if (validConfig)
+	  {
+		publisher.disconnect();
+	  }	
+      break;
+    default:
+      break;
+  }
+}
 
 void process_message(byte *buffer, size_t len, Sensor *sensor)
 {
@@ -55,6 +116,11 @@ void setup()
 #ifdef DEBUG
 	// Delay for getting a serial console attached in time
 	delay(2000);
+#endif
+
+#ifdef ESP32_ETH
+  	WiFi.onEvent(OnEthernetEvent);
+  	ETH.begin();
 #endif
 
 	// Setup reading heads
@@ -82,10 +148,12 @@ void setup()
 	iotWebConf.setConfigSavedCallback(&configSaved);
 	iotWebConf.setWifiConnectionCallback(&wifiConnected);
 
-
+#ifndef ESP32_ETH
 	WiFi.onStationModeDisconnected([](const WiFiEventStationModeDisconnected& event) {
       publisher.disconnect();
     });
+#endif
+
 
 	// -- Define how to handle updateServer calls.
 	iotWebConf.setupUpdateServer(
@@ -94,7 +162,7 @@ void setup()
 		[](const char *userName, char *password)
 		{ httpUpdater.updateCredentials(userName, password); });
 
-	boolean validConfig = iotWebConf.init();
+	validConfig = iotWebConf.init();
 	if (!validConfig)
 	{
 		DEBUG("Missing or invalid config. MQTT publisher disabled.");
