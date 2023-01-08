@@ -37,6 +37,7 @@ uint64_t millis64()
 class SensorConfig
 {
 public:
+    HardwareSerial* uart;
     const uint8_t pin;
     const char *name;
     const bool numeric_only;
@@ -55,10 +56,19 @@ public:
         this->config = config;
         DEBUG("Initializing sensor %s...", this->config->name);
         this->callback = callback;
-        this->serial = unique_ptr<SoftwareSerial>(new SoftwareSerial());
-        this->serial->begin(9600, SWSERIAL_8N1, this->config->pin, -1, false);
-        this->serial->enableTx(false);
-        this->serial->enableRx(true);
+        if (config->uart == nullptr)
+        {
+            auto newSerial = unique_ptr<SoftwareSerial>(new SoftwareSerial());
+            newSerial->begin(9600, SWSERIAL_8N1, this->config->pin, -1, false);
+            newSerial->enableTx(false);
+            newSerial->enableRx(true);
+            this->serial = move(newSerial);
+        }
+        else
+        {
+            config->uart->begin(9600, SERIAL_8N1, config->pin, -1);
+            this->serial.reset(config->uart);
+        }
         DEBUG("Initialized sensor %s.", this->config->name);
 
         if (this->config->status_led_enabled)
@@ -85,7 +95,7 @@ public:
     }
 
 private:
-    unique_ptr<SoftwareSerial> serial;
+    unique_ptr<Stream> serial;
     byte buffer[BUFFER_SIZE];
     size_t position = 0;
     unsigned long last_state_reset = 0;
