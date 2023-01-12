@@ -203,13 +203,11 @@ private:
     client.onDisconnect([this](AsyncMqttClientDisconnectReason reason) {
       this->connected = false;
       DEBUG(F("MQTT: Disconnected. Reason: %d."), reason);
-#ifndef ESP32_ETH
-      reconnectTimer.attach(MQTT_RECONNECT_DELAY, [this]() {
+      reconnectTimer.attach<MqttPublisher*>(MQTT_RECONNECT_DELAY, [](MqttPublisher* publisher) {
         if (WiFi.isConnected()) {
-          this->connect();          
+          publisher->connect();          
         }
-      });
-#endif
+      }, this);
     });
   }
 };
