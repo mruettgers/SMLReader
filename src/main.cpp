@@ -93,6 +93,7 @@ void OnEthernetEvent(WiFiEvent_t event)
     default:
       break;
   }
+  publisher.setNetworkConnected(eth_connected);
 }
 
 void process_message(byte *buffer, size_t len, Sensor *sensor)

@@ -152,8 +152,14 @@ public:
     this->reconnectTimer.detach();
   }
 
+  void setNetworkConnected(bool connected)
+  {
+    networkConnected = connected;
+  }
+
 private:
   bool connected = false;
+  bool networkConnected = false;
   MqttConfig config;
   AsyncMqttClient client;
   Ticker reconnectTimer;
@@ -204,7 +210,8 @@ private:
       this->connected = false;
       DEBUG(F("MQTT: Disconnected. Reason: %d."), reason);
       reconnectTimer.attach<MqttPublisher*>(MQTT_RECONNECT_DELAY, [](MqttPublisher* publisher) {
-        if (WiFi.isConnected()) {
+        DEBUG(F("MQTT: Trying to reconnect, Wifi.isConnected = %d"), WiFi.isConnected());
+        if (WiFi.isConnected() || publisher->networkConnected) {
           publisher->connect();          
         }
       }, this);
