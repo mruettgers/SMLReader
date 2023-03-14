@@ -37,13 +37,13 @@ uint64_t millis64()
 class SensorConfig
 {
 public:
-    const uint8_t pin;
-    const char *name;
-    const bool numeric_only;
-    const bool status_led_enabled;
-    const bool status_led_inverted;
-    const uint8_t status_led_pin;
-    const uint8_t interval;
+    uint8_t pin;
+    char* name;
+    bool numeric_only;
+    bool status_led_enabled;
+    bool status_led_inverted;
+    uint8_t status_led_pin;
+    uint16_t interval;
 };
 
 class Sensor
@@ -73,6 +73,11 @@ public:
         this->init_state();
     }
 
+    bool hasProcessedMessage()
+    {
+        return processedMessage;
+    }
+
     void loop()
     {
         this->run_current_state();
@@ -95,6 +100,7 @@ private:
     State state = INIT;
     void (*callback)(byte *buffer, size_t len, Sensor *sensor) = NULL;
     unique_ptr<JLed> status_led;
+    bool processedMessage;
 
     void run_current_state()
     {
@@ -283,6 +289,7 @@ private:
         // Call listener
         if (this->callback != NULL)
         {
+            this->processedMessage = true;
             this->callback(this->buffer, this->position, this);
         }
 
