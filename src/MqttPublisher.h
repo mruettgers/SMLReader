@@ -9,6 +9,10 @@
 #include <string.h>
 #include <sml/sml_file.h>
 
+#ifdef ESP32_ETH
+#include <ETH.h>
+#endif
+
 #define MQTT_RECONNECT_DELAY 5
 #define MQTT_LWT_TOPIC "LWT"
 #define MQTT_LWT_RETAIN true
@@ -148,8 +152,14 @@ public:
     this->reconnectTimer.detach();
   }
 
+  void setNetworkConnected(bool connected)
+  {
+    networkConnected = connected;
+  }
+
 private:
   bool connected = false;
+  bool networkConnected = false;
   MqttConfig config;
   AsyncMqttClient client;
   Ticker reconnectTimer;
@@ -188,18 +198,23 @@ private:
       this->reconnectTimer.detach();
       DEBUG(F("MQTT: Connection established."));
       char message[64];
-      snprintf(message, 64, "Hello from %08X, running SMLReader version %s.", ESP.getChipId(), VERSION);
+#ifdef ESP32_ETH
+      snprintf(message, 64, "Hello from %s, running SMLReader version %s.", ETH.macAddress().c_str(), VERSION);
+#else      
+      snprintf(message, 64, "Hello from %08X, running SMLReader version %s.", ESP.getChip(), VERSION);
+#endif
       info(message);
       publish(baseTopic + MQTT_LWT_TOPIC, MQTT_LWT_PAYLOAD_ONLINE, MQTT_LWT_QOS, MQTT_LWT_RETAIN);
     });
     client.onDisconnect([this](AsyncMqttClientDisconnectReason reason) {
       this->connected = false;
       DEBUG(F("MQTT: Disconnected. Reason: %d."), reason);
-      reconnectTimer.attach(MQTT_RECONNECT_DELAY, [this]() {
-        if (WiFi.isConnected()) {
-          this->connect();          
+      reconnectTimer.attach<MqttPublisher*>(MQTT_RECONNECT_DELAY, [](MqttPublisher* publisher) {
+        DEBUG(F("MQTT: Trying to reconnect, Wifi.isConnected = %d"), WiFi.isConnected());
+        if (WiFi.isConnected() || publisher->networkConnected) {
+          publisher->connect();          
         }
-      });
+      }, this);
     });
   }
 };
